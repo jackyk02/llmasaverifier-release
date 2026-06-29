@@ -1,0 +1,211 @@
+#!/usr/bin/env python3
+"""
+Run LLM-as-a-Verifier on a benchmark from the registry in llm_verifier/benchmarks.py.
+
+Pipeline:
+  1. Load the benchmark trajectories (llm_verifier/loaders.py).
+  2. Load the verifier criteria + ground-truth note (prompts/<benchmark>.md).
+  3. For every "swing" task (where the N trials disagree), run a Pivot
+     Preference Tournament (llm_verifier/pivot_tournament.py): a random ring pass,
+     pivots = empirical leaders, then pivot rounds. Only the directed pairs the
+     tournament needs are scored, with caching (fine_grained_reward.py).
+  4. Report Pass@1 vs LLM-as-a-Verifier vs Oracle.
+
+Scoring is two-phase because step 3's pivots depend on the ring-pass results:
+first score all ring pairs, then choose pivots, then score the pivot rounds.
+
+Usage:
+    python run.py                  # list available benchmarks
+    python run.py terminal_bench
+    python run.py swe_bench --pivots 2 --n-verifications 8
+"""
+
+import argparse
+import os
+import random
+import sys
+
+ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, ROOT_DIR)
+
+from llm_verifier.benchmarks import BENCHMARKS
+from llm_verifier.fine_grained_reward import (
+    GRANULARITY,
+    LazyClient,
+    directed_reward,
+    load_dotenv,
+    score_directed_pairs,
+)
+from llm_verifier.loaders import LOADERS
+from llm_verifier.prompts import load_prompts, select_criteria
+from llm_verifier import pivot_tournament as ppt
+
+load_dotenv(ROOT_DIR)
+
+
+def classify(tasks):
+    """Split tasks into all-pass (every trial succeeds) and swing (trials
+    disagree). All-fail tasks are unwinnable and need no verification."""
+    all_pass, swing = [], []
+    for name, trials in sorted(tasks.items()):
+        rewards = [t["reward"] for t in trials]
+        if all(r == 1 for r in rewards):
+            all_pass.append(name)
+        elif not all(r == 0 for r in rewards):
+            swing.append(name)
+    return all_pass, swing
+
+
+def resolve_config(benchmark):
+    """Look a benchmark name up in the registry. Lists the available benchmarks
+    and exits if the argument is missing or unknown."""
+    if benchmark in BENCHMARKS:
+        return BENCHMARKS[benchmark]
+    if benchmark:
+        print(f"Unknown benchmark: {benchmark!r}\n")
+    else:
+        print("Usage: python run.py <benchmark>\n")
+    print("Available benchmarks:")
+    for name in BENCHMARKS:
+        print(f"  python run.py {name}")
+    sys.exit(0 if not benchmark else 2)
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("benchmark", nargs="?",
+                        help="Benchmark name (e.g. terminal_bench). Omit to "
+                             "list available benchmarks.")
+    parser.add_argument("--pivots", type=int, default=None,
+                        help="Override config pivots k (default 2)")
+    parser.add_argument("--n-verifications", type=int, default=None,
+                        help="Override config repeated verifications K")
+    parser.add_argument("--seed", type=int, default=None,
+                        help="Override config seed for the random ring pass")
+    parser.add_argument("--max-workers", type=int, default=50)
+    args = parser.parse_args()
+
+    cfg = resolve_config(args.benchmark)
+
+    k = args.pivots if args.pivots is not None else cfg.pivots
+    n_reps = (args.n_verifications if args.n_verifications is not None
+              else cfg.n_verifications)
+    seed = args.seed if args.seed is not None else cfg.seed
+
+    # ---- criteria + ground-truth note ----
+    note, all_criteria = load_prompts(_abs(cfg.prompts))
+    criteria = select_criteria(all_criteria, cfg.criteria)
+    criteria_ids = [c["id"] for c in criteria]
+
+    # ---- data ----
+    print(f"Loading {cfg.name} ...")
+    tasks, n_runs = LOADERS[cfg.loader](cfg.data, ROOT_DIR)
+    n_tasks = len(tasks)
+    all_pass, swing = classify(tasks)
+    print(f"  tasks={n_tasks}  all-pass={len(all_pass)}  swing={len(swing)}  "
+          f"N(trials)={n_runs}")
+    print(f"  criteria={criteria_ids}  K={n_reps}  pivots={k}  seed={seed}")
+
+    cache_file = _abs(cfg.cache)
+    os.makedirs(os.path.dirname(cache_file), exist_ok=True)
+    lazy = LazyClient()
+
+    def score_fn(scores):
+        def directed(a, b, t):
+            return directed_reward(scores, t, a, b, criteria_ids, n_reps)
+        return directed
+
+    # ---- step 1: sample one ring per swing task (deterministic given seed) ----
+    rng = random.Random(seed)
+    rings = {task: ppt.ring_cycle(len(tasks[task]), rng)
+             for task in swing}
+
+    # ---- phase A: score all ring pairs ----
+    print("Phase A: ring pass")
+    scores = score_directed_pairs(
+        lazy, tasks, rings, criteria, note, n_reps, args.max_workers,
+        cache_file)
+    directed = score_fn(scores)
+
+    # ---- step 2: pivots = ring-pass leaders; collect pivot-round pairs ----
+    pivots_by_task = {}
+    pr_pairs = {}
+    for task in swing:
+        n = len(tasks[task])
+        w, c = [0.0] * n, [0] * n
+        ppt.accumulate(rings[task], lambda a, b, t=task: directed(a, b, t),
+                       w, c)
+        pivots = ppt.select_pivots(w, c, k)
+        pivots_by_task[task] = pivots
+        pr_pairs[task] = ppt.pivot_round_pairs(n, pivots)
+
+    # ---- phase B: score all pivot-round pairs ----
+    print("Phase B: pivot rounds")
+    scores = score_directed_pairs(
+        lazy, tasks, pr_pairs, criteria, note, n_reps, args.max_workers,
+        cache_file)
+    directed = score_fn(scores)
+
+    # ---- step 3+4: aggregate ring + pivot rounds, select winner ----
+    selected = 0
+    total_comparisons = 0
+    for task in swing:
+        n = len(tasks[task])
+        w, c = [0.0] * n, [0] * n
+        ppt.accumulate(rings[task], lambda a, b, t=task: directed(a, b, t),
+                       w, c)
+        ppt.accumulate(pr_pairs[task], lambda a, b, t=task: directed(a, b, t),
+                       w, c)
+        best = max(range(n), key=lambda i: (w[i] / c[i] if c[i] else 0.0, -i))
+        total_comparisons += len(rings[task]) + len(pr_pairs[task])
+        if tasks[task][best]["reward"] == 1:
+            selected += 1
+
+    # ---- metrics ----
+    pass1 = len(all_pass) + sum(
+        sum(t["reward"] for t in tasks[tn]) / len(tasks[tn]) for tn in swing)
+    verifier = len(all_pass) + selected
+    oracle = len(all_pass) + len(swing)
+    avg_cmp = total_comparisons / max(1, len(swing))
+
+    report(cfg, n_tasks, n_runs, len(swing), criteria_ids, n_reps, k, seed,
+           pass1, verifier, oracle, avg_cmp)
+
+
+def report(cfg, n_tasks, n_runs, n_swing, criteria_ids, n_reps, k, seed,
+           pass1, verifier, oracle, avg_cmp):
+    lines = [
+        "",
+        "=" * 72,
+        cfg.name,
+        f"  g{GRANULARITY}  criteria={criteria_ids}  K={n_reps}  "
+        f"pivots={k}  seed={seed}",
+        f"  tasks={n_tasks}  swing={n_swing}  N(trials)={n_runs}  "
+        f"comparisons/task={avg_cmp:.1f}",
+        "=" * 72,
+        f"{'Method':<26s}  {'Score':>14s}  {'Rate':>7s}",
+        "-" * 72,
+        f"{'Pass@1':<26s}  {pass1:>8.2f}/{n_tasks}  "
+        f"{100 * pass1 / n_tasks:>6.1f}%",
+        f"{'LLM-as-a-Verifier':<26s}  {verifier:>8d}/{n_tasks}  "
+        f"{100 * verifier / n_tasks:>6.1f}%",
+        f"{'Oracle (Bo' + str(n_runs) + ')':<26s}  {oracle:>8d}/{n_tasks}  "
+        f"{100 * oracle / n_tasks:>6.1f}%",
+        "",
+    ]
+    print("\n".join(lines))
+    results_file = _abs(cfg.results)
+    os.makedirs(os.path.dirname(results_file), exist_ok=True)
+    with open(results_file, "w") as f:
+        f.write("\n".join(lines))
+    print(f"Results saved: {results_file}")
+
+
+def _abs(path):
+    return path if os.path.isabs(path) else os.path.join(ROOT_DIR, path)
+
+
+if __name__ == "__main__":
+    main()

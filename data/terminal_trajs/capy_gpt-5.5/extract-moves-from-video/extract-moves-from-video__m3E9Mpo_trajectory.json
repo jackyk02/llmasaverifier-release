@@ -1,0 +1,617 @@
+{
+ "trial_id": "1ce03f69-94e1-4e11-b120-31f006685737",
+ "trial_name": "extract-moves-from-video__m3E9Mpo",
+ "task_name": "extract-moves-from-video",
+ "task_checksum": "605fb166c0af666150b184a6ca50f1ca1c2221a5b93e44efd21c7ea40d746d54",
+ "reward": 0,
+ "started_at": "2026-04-28T02:31:14.158044Z",
+ "ended_at": "2026-04-28T03:01:49.626892Z",
+ "trajectory": {
+  "schema_version": "capy-converted-1.0",
+  "session_id": "1ce03f69-94e1-4e11-b120-31f006685737",
+  "agent": {
+   "name": "Capy",
+   "model_name": "openai/gpt-5.5"
+  },
+  "steps": [
+   {
+    "step_id": 1,
+    "source": "user",
+    "message": "Download this video of someone playing zork. https://www.youtube.com/watch?v=ZCbvyPbhRfA. Then transcribe the entire contents of the text, and create a file /app/solution.txt that has all the moves they input, one per line, in the format '\"'\"'n'\"'\"' or '\"'\"'get bag'\"'\"' etc.\n"
+   },
+   {
+    "step_id": 2,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "ls",
+      "arguments": {
+       "keystrokes": "[ls] {\"path\":\"/app\",\"depth\":2}"
+      }
+     }
+    ],
+    "observation": {
+     "results": []
+    }
+   },
+   {
+    "step_id": 3,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "which yt-dlp || which youtube-dl || true; which ffmpeg || true; which tesseract || true; python3 --version"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 127\nCommand not found: python3. Probe available alternatives first, or install only if necessary.) stderr: /bin/bash: line 1: python3: command not found\nexit code 127"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 4,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "command -v yt-dlp || true; command -v youtube-dl || true; command -v ffmpeg || true; command -v tesseract || true; command -v python || true; command -v node || true; command -v pip || true; command -...(+27 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) /usr/bin/apt-get\nLinux 1c9fee84-bb6d-4ad4-b960-c724140c25b2 6.8.0-85-generic #85-Ubuntu SMP PREEMPT_DYNAMIC Thu Sep 18 15:26:59 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 5,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "find /app -maxdepth 3 -type f -o -type d | sed 's#^#/##' | head -100"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) //app"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 6,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "apt-get update"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) Hit:1 http://security.ubuntu.com/ubuntu noble-security InRelease\nHit:2 http://archive.ubuntu.com/ubuntu noble InRelease\nHit:3 http://archive.ubuntu.com/ubuntu noble-updates InRelease\nHit:4 http://arch...(+54 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 7,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "DEBIAN_FRONTEND=noninteractive apt-get install -y python3 python3-pip ffmpeg yt-dlp tesseract-ocr imagemagick"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) Reading package lists...\nBuilding dependency tree...\nReading state information...\nThe following additional packages will be installed:\n  adduser adwaita-icon-theme alsa-topology-conf alsa-ucm-conf at-...(+57 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 8,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "yt-dlp --skip-download --dump-json https://www.youtube.com/watch?v=ZCbvyPbhRfA > /app/info.json && python3 - <<'PY'\nimport json\nj=json.load(open('/app/info.json'))\nprint(j.get('title'))\nprint(j.get('d...(+55 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) Zork I: The Great Underground Empire speedrun - 2:53\n190\nswordsmankirby\nsubs dict_keys([]) auto dict_keys([])\nformats 4\nstderr: WARNING: [youtube] YouTube said: ERROR - Precondition check failed.\nWA...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 9,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "yt-dlp -f 'best[height<=720]/best' -o '/app/zork.%(ext)s' https://www.youtube.com/watch?v=ZCbvyPbhRfA && ls -lh /app/zork.*"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 1) [youtube] Extracting URL: https://www.youtube.com/watch?v=ZCbvyPbhRfA\n[youtube] ZCbvyPbhRfA: Downloading webpage\n[youtube] ZCbvyPbhRfA: Downloading ios player API JSON\n[youtube] ZCbvyPbhRfA: Downloadi...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 10,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "python3 -m pip install --break-system-packages -U yt-dlp"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 1) Requirement already satisfied: yt-dlp in /usr/lib/python3/dist-packages (2024.4.9)\nCollecting yt-dlp\n  Downloading yt_dlp-2026.3.17-py3-none-any.whl.metadata (182 kB)\n     \u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501...(+55 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 11,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "python3 -m pip install --break-system-packages --ignore-installed -U yt-dlp && command -v yt-dlp && yt-dlp --version"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) Collecting yt-dlp\n  Using cached yt_dlp-2026.3.17-py3-none-any.whl.metadata (182 kB)\nUsing cached yt_dlp-2026.3.17-py3-none-any.whl (3.3 MB)\nInstalling collected packages: yt-dlp\nSuccessfully installe...(+55 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 12,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "rm -f /app/zork.*; /usr/local/bin/yt-dlp -f 'bestvideo[height<=720]+bestaudio/best[height<=720]/best' -o '/app/zork.%(ext)s' https://www.youtube.com/watch?v=ZCbvyPbhRfA && ls -lh /app/zork.*"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) [youtube] Extracting URL: https://www.youtube.com/watch?v=ZCbvyPbhRfA\n[youtube] ZCbvyPbhRfA: Downloading webpage\n[youtube] ZCbvyPbhRfA: Downloading android vr player API JSON\n[info] ZCbvyPbhRfA: Downl...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 13,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "ffprobe -v error -select_streams v:0 -show_entries stream=width,height,r_frame_rate,duration -of default=nw=1 /app/zork.mkv"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) width=1280\nheight=720\nr_frame_rate=30/1\nduration=N/A"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 14,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "mkdir -p /app/frames && for t in 0 5 10 20 40 80 120 160 185; do ffmpeg -hide_banner -loglevel error -ss $t -i /app/zork.mkv -frames:v 1 /app/frames/frame_${t}.png; done && ls -lh /app/frames"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) total 1.3M\n-rw-r--r-- 1 root root 3.0K Apr 28 02:33 frame_0.png\n-rw-r--r-- 1 root root  99K Apr 28 02:33 frame_10.png\n-rw-r--r-- 1 root root 217K Apr 28 02:33 frame_120.png\n-rw-r--r-- 1 root root 133K...(+55 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 15,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "read",
+      "arguments": {
+       "keystrokes": "[read] {\"file_path\":\"/app/frames/frame_20.png\"}"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "1\t\ufffdPNG\n     2\t\u001a\n     3\t\u0000\u0000\u0000\nIHDR\u0000\u0000\u0005\u0000\u0000\u0000\u0002\ufffd\b\u0002\u0000\u0000\u0000@\u001fJ\u0001\u0000\u0000\u0000\tpHYs\u0000\u0000\u0000\u0001\u0000\u0000\u0000\u0001\u0000O%\ufffd\ufffd\u0000\u0000\u0000\u0004cICP\u0001\u0001\u0000\u0001\ufffds\ufffdV\u0000\u0000\u0000 cHRM\u0000\u0000z&\u0000\u0000\ufffd\ufffd\u0000\u0000\ufffd\u0000\u0000\u0000\ufffd\ufffd\u0000\u0000u0\u0000\u0000\ufffd`\u0000\u0000:\ufffd\u0000\u0000\u0017p\ufffd\ufffdQ<\u0000\u0000\u0000\u0004gAMA\u0000\u0000\ufffd2\ufffdIpD\u0000\u0000\u0010\u0000IDATx\ufffd\ufffd\ufffdUG\ufffd\ufffdw7\u0003\"\n     4\t\f\b\u001b\u0010QD\u0011\ufffd\ufffd\ufffdI2I`@Da0\ufffd(\ufffd...(+57 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 16,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "tesseract /app/frames/frame_20.png stdout --psm 6 2>/tmp/tess.err | head -80; echo 'ERR:'; cat /tmp/tess.err | head"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) Gallery Score: 44 Moves: 19\nCellar\nYou are in a dark and damp cellar with a narrow passageway leading north, and\na crawlway to the south. On the west is the bottom of a steep metal ramp which\nis uncl...(+55 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 17,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "python3 - <<'PY'\nimport json\nj=json.load(open('/app/info.json'))\nfor k in ['title','description','upload_date','webpage_url']:\n print('---',k,'---')\n print(j.get(k))\nPY"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) --- title ---\nZork I: The Great Underground Empire speedrun - 2:53\n--- description ---\nPlayed on DOSBox 0.74. Timing starts from the first move and ends on the last move.\nFound several shorter ways t...(+54 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 18,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "mkdir -p /app/ocr1 && rm -rf /app/ocr1/* && ffmpeg -hide_banner -loglevel error -i /app/zork.mkv -vf fps=1 /app/ocr1/frame_%04d.png && python3 - <<'PY'\nimport os, subprocess, re\nframes=sorted(os.listd...(+55 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 1) stderr: /bin/bash: line 16: warning: here-document at line 1 delimited by end-of-file (wanted `PY')\n  File \"<stdin>\", line 14\n    PY > /app/ocr1_cmds.txt\n         ^\nSyntaxError: invalid syntax\nexit ...(+6 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 19,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "mkdir -p /app/ocr1 && rm -rf /app/ocr1/* && ffmpeg -hide_banner -loglevel error -i /app/zork.mkv -vf fps=1 /app/ocr1/frame_%04d.png && python3 - <<'PY' > /app/ocr1_cmds.txt\nimport os, subprocess\nframe...(+55 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) 1000 /app/ocr1_cmds.txt\n### 001s frame_0002.png\n>\n### 003s frame_0004.png\n>\n### 004s frame_0005.png\n>\n### 006s frame_0007.png\n>\n### 009s frame_0010.png\n>n\n### 011s frame_0012.png\n>u\n### 012s frame_001...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 20,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "read",
+      "arguments": {
+       "keystrokes": "[read] {\"file_path\":\"/app/ocr1_cmds.txt\",\"offset\":1,\"limit\":400}"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "1\t### 001s frame_0002.png\n     2\t>\n     3\t### 003s frame_0004.png\n     4\t>\n     5\t### 004s frame_0005.png\n     6\t>\n     7\t### 006s frame_0007.png\n     8\t>\n     9\t### 009s frame_0010.png\n    10\t>n...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 21,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "read",
+      "arguments": {
+       "keystrokes": "[read] {\"file_path\":\"/app/ocr1_cmds.txt\",\"offset\":380,\"limit\":420}"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "380\t>get all\n   381\t>drop shovel\n   382\t>sw\n   383\t>s\n   384\t### 077s frame_0078.png\n   385\t>get all\n   386\t>drop shovel\n   387\t>sw\n   388\t>s\n   389\t>put bar,emera\n   390\t### 078s frame_0079.png\n  ...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 22,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "read",
+      "arguments": {
+       "keystrokes": "[read] {\"file_path\":\"/app/ocr1_cmds.txt\",\"offset\":790,\"limit\":260}"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "790\t>n\n   791\t>put all\n   792\t>ca\n   793\t### 147s frame_0148.png\n   794\t>get\n   795\t>put all\n   796\t>eage\n   797\t>e\n   798\t>get _\n   799\t### 148s frame_0149.png\n   800\t>get\n   801\t>put all\n   802\t>...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 23,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "for t in 58 59 60 61 62 63 64 65; do echo '### time' $t; tesseract /app/ocr1/frame_$(printf '%04d' $((t+1))).png stdout --psm 6 2>/dev/null | sed -n '1,120p'; done > /app/t58_65.txt\nsed -n '1,240p' /a...(+13 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) ### time 58\nLoud Room Score: 148 Moves: 90\n>def late boat\nThe boat def lates.\n>get\n(pile of plastic)\nTaken.\n>se\nDeep Canyon\nYou are on the south edge of a deep canyon. Passages lead off to the ...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 24,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "for t in 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32 33 34 35 36 37 38 39 40; do echo '### time' $t; img=/app/ocr1/frame_$(printf '%04d' $((t+1))).png; [ -f \"$img\" ] && te...(+54 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) ### time 8\nWest of House Score: 0 Moves: 0\nZORK I: The Great Underground Empire\nCopyright (c) 1981, 1982, 1983 Infocom, Inc. All rights reserved.\nZORK is a registered trademark of Infocom, Inc.\nRev...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 25,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "read",
+      "arguments": {
+       "keystrokes": "[read] {\"file_path\":\"/app/t08_40.txt\",\"offset\":260,\"limit\":500}"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "260\t\n   261\t>open case\n   262\t\n   263\tOpened.\n   264\t\n   265\t>open trap\n   266\t\n   267\tThe door reluctantly opens to reveal a rickety staircase descending into\n   268\tdarkness.\n   269\t\n   270\t>d\n  ...(+57 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 26,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "read",
+      "arguments": {
+       "keystrokes": "[read] {\"file_path\":\"/app/t08_40.txt\",\"offset\":720,\"limit\":350}"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "720\tThis is a room which looks like an Egyptian tomb. There is an ascending\n   721\tstaircase to the west.\n   722\t\n   723\tThe solid-gold coffin used for the burial of Ramses II is here.\n   724\t\n   7...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 27,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "mkdir -p /app/check_times && for t in 12.0 12.2 12.4 12.6 12.8 13.0; do out=/app/check_times/t_${t}.png; ffmpeg -hide_banner -loglevel error -ss $t -i /app/zork.mkv -frames:v 1 \"$out\"; echo '###' $t; ...(+54 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) ### 12.0\n>n\nNorth of House\nYou are facing the north side of a white house. There is no door here, and all\nthe windows are boarded up. To the north a narrow path winds through the trees.\n>n\nForest P...(+56 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 28,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "mkdir -p /app/ocr5 && rm -rf /app/ocr5/* && ffmpeg -hide_banner -loglevel error -i /app/zork.mkv -vf fps=5 /app/ocr5/frame_%05d.png && python3 - <<'PY' > /app/ocr5_cmds.txt\nimport os, subprocess, re, ...(+55 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 124 (timed out after 600s)) Command timed out\nexit code 124"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 29,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "ls /app/ocr5 | wc -l; wc -l /app/ocr5_cmds.txt 2>/dev/null || true; tail -20 /app/ocr5_cmds.txt 2>/dev/null || true"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) 951\n536 /app/ocr5_cmds.txt\n>get bag\n>sw\n### 0025.0s frame_00126.png\nMaze Score: 54 Moves: 32\n>get bag\n>sw\n>e\n>S\n### 0025.2s frame_00127.png\nMaze Score: 54 Moves: 33\n>get bag\n>e\n>s\n### 0025.4s frame_00...(+54 chars)"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 30,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "du -sh /app/ocr5 2>/dev/null || true"
+      }
+     }
+    ],
+    "observation": {
+     "results": [
+      {
+       "content": "(exit code 0) 155M\t/app/ocr5"
+      }
+     ]
+    }
+   },
+   {
+    "step_id": 31,
+    "source": "agent",
+    "message": "",
+    "tool_calls": [
+     {
+      "tool_name": "bash_run",
+      "arguments": {
+       "keystrokes": "python3 - <<'PY' > /app/ocr1_full.txt\nimport os, subprocess\nfor i,f in enumerate(sorted(os.listdir('/app/ocr1')), start=1):\n    out=subprocess.run(['tesseract','/app/ocr1/'+f,'stdout','--psm','6'],std...(+55 chars)"
+      }
+     }
+    ],
+    "observation": {
+     "results": []
+    }
+   }
+  ],
+  "final_metrics": {}
+ }
+}

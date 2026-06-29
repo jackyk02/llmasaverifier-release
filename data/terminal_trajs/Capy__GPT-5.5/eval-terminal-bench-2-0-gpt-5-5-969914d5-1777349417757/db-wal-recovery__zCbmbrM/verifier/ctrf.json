@@ -1,0 +1,86 @@
+{
+    "results": {
+        "tool": {
+            "name": "pytest",
+            "version": "8.4.1"
+        },
+        "summary": {
+            "tests": 7,
+            "passed": 6,
+            "failed": 1,
+            "skipped": 0,
+            "pending": 0,
+            "other": 0,
+            "start": 1777350255.2890966,
+            "stop": 1777350255.355124
+        },
+        "tests": [
+            {
+                "name": "test_outputs.py::test_recovered_json_exists",
+                "status": "passed",
+                "duration": 0.00029711052775382996,
+                "start": 1777350255.3402648,
+                "stop": 1777350255.3407106,
+                "retries": 0,
+                "file_path": "test_outputs.py"
+            },
+            {
+                "name": "test_outputs.py::test_recovered_json_is_valid",
+                "status": "passed",
+                "duration": 0.00027617067098617554,
+                "start": 1777350255.3408356,
+                "stop": 1777350255.3411992,
+                "retries": 0,
+                "file_path": "test_outputs.py"
+            },
+            {
+                "name": "test_outputs.py::test_recovered_data_structure",
+                "status": "passed",
+                "duration": 0.00024124979972839355,
+                "start": 1777350255.341296,
+                "stop": 1777350255.3416061,
+                "retries": 0,
+                "file_path": "test_outputs.py"
+            },
+            {
+                "name": "test_outputs.py::test_recovered_data_sorted",
+                "status": "passed",
+                "duration": 0.0002390630543231964,
+                "start": 1777350255.3416922,
+                "stop": 1777350255.341999,
+                "retries": 0,
+                "file_path": "test_outputs.py"
+            },
+            {
+                "name": "test_outputs.py::test_recovered_data_completeness",
+                "status": "failed",
+                "raw_status": "call_failed",
+                "duration": 0.00035855919122695923,
+                "start": 1777350255.3420963,
+                "stop": 1777350255.3541727,
+                "retries": 0,
+                "file_path": "test_outputs.py",
+                "trace": "def test_recovered_data_completeness():\n        \"\"\"Test that all expected data is recovered including WAL changes.\"\"\"\n        with open(\"/app/recovered.json\", \"r\") as f:\n            data = json.load(f)\n    \n        # We expect 11 records total (5 base + 6 new from WAL)\n        assert len(data) == 11, f\"Expected 11 records, got {len(data)}\"\n    \n        # Check for specific expected records\n        ids = [item[\"id\"] for item in data]\n        expected_ids = list(range(1, 12))  # 1 through 11\n        assert ids == expected_ids, f\"Expected ids {expected_ids}, got {ids}\"\n    \n        # Check for specific updated values (from decrypted WAL)\n        id_to_item = {item[\"id\"]: item for item in data}\n    \n        # These should be the updated values from WAL\n        assert id_to_item[1][\"value\"] == 150, \"Apple should have updated value 150 from WAL\"\n>       assert id_to_item[2][\"value\"] == 250, (\n            \"Banana should have updated value 250 from WAL\"\n        )\nE       AssertionError: Banana should have updated value 250 from WAL\nE       assert 200 == 250\n\n/tests/test_outputs.py:65: AssertionError",
+                "message": "The test failed in the call phase due to an assertion error"
+            },
+            {
+                "name": "test_outputs.py::test_no_duplicate_ids",
+                "status": "passed",
+                "duration": 0.00025203078985214233,
+                "start": 1777350255.3542953,
+                "stop": 1777350255.3546274,
+                "retries": 0,
+                "file_path": "test_outputs.py"
+            },
+            {
+                "name": "test_outputs.py::test_wal_was_decrypted",
+                "status": "passed",
+                "duration": 0.00023914873600006104,
+                "start": 1777350255.3547223,
+                "stop": 1777350255.3550313,
+                "retries": 0,
+                "file_path": "test_outputs.py"
+            }
+        ]
+    }
+}

@@ -4,9 +4,9 @@ Run LLM-as-a-Verifier on a benchmark from the registry in llm_verifier/benchmark
 
 Pipeline:
   1. Load the benchmark trajectories (llm_verifier/loaders.py).
-  2. Load the verifier criteria + ground-truth note (prompts/<benchmark>.md).
-  3. For every "swing" task (where the N trials disagree), run a Pivot
-     Preference Tournament (llm_verifier/pivot_tournament.py): a random ring pass,
+  2. Load the verifier criteria + ground-truth note (llm_verifier/criteria/<benchmark>.md).
+  3. For every "swing" task (where the N trials disagree), run a Probabilistic
+     Pivot Tournament (llm_verifier/pivot_tournament.py): a random ring pass,
      pivots = empirical leaders, then pivot rounds. Only the directed pairs the
      tournament needs are scored, with caching (fine_grained_reward.py).
   4. Report Pass@1 vs LLM-as-a-Verifier vs Oracle.
@@ -95,7 +95,7 @@ def main():
     seed = args.seed if args.seed is not None else cfg.seed
 
     # ---- criteria + ground-truth note ----
-    note, all_criteria = load_prompts(_abs(cfg.prompts))
+    note, all_criteria = load_prompts(cfg.prompts)
     criteria = select_criteria(all_criteria, cfg.criteria)
     criteria_ids = [c["id"] for c in criteria]
 

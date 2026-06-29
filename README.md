@@ -1,27 +1,8 @@
-<p align="center">
-  <strong>LLM-as-a-Verifier</strong>
-</p>
+<h1 align="center">LLM-as-a-Verifier</h1>
 
 <p align="center">
-  <strong>Pick the best of N agent rollouts with fine-grained, logprob-based verification — and an O(N·k) tournament instead of O(N²).</strong>
+  <img src="figures/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
 </p>
-
-<p align="center">
-  <a href="#quick-start"><strong>Quick Start</strong></a> &ensp;|&ensp;
-  <a href="#how-it-works"><strong>How it works</strong></a> &ensp;|&ensp;
-  <a href="#reproducing-the-results"><strong>Reproduce</strong></a> &ensp;|&ensp;
-  <a href="#adding-a-benchmark"><strong>Add a benchmark</strong></a>
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/python-3.9%2B-3776ab?logo=python&logoColor=white" alt="Python">
-  <img src="https://img.shields.io/badge/verifier-Gemini%202.5%20Flash-4285f4?logo=googlegemini&logoColor=white" alt="Gemini">
-  <img src="https://img.shields.io/badge/License-MIT-green" alt="License">
-</p>
-
----
-
-## What is LLM-as-a-Verifier?
 
 **LLM-as-a-Verifier** is a general-purpose verification framework that gives
 *fine-grained* feedback by scaling scoring granularity, repeated verification,
@@ -31,8 +12,8 @@ distribution over an ordered set of score tokens and takes its expectation,
 turning every judgement into a continuous reward.
 
 Used as a trajectory reward model for test-time scaling, it selects the best of
-`N` agent rollouts per task with a **Pivot Preference Tournament (PPT)** that
-costs `O(N·k)` verifier calls instead of the `O(N²)` of a full round-robin —
+`N` agent rollouts per task with a **Probabilistic Pivot Tournament (PPT)** that
+costs `O(Nk²)` verifier calls instead of the `O(N²)` of a full round-robin —
 while matching round-robin accuracy.
 
 **If you can describe what "good" looks like, you can verify it**: coding
@@ -89,19 +70,20 @@ trajectories = [rollout_1, rollout_2, rollout_3, rollout_4, rollout_5]  # string
 result = llm_verifier.select(
     problem=problem,
     trajectories=trajectories,
-    criteria="prompts/swe_bench.md",   # decomposed evaluation criteria
+    criteria="swe_bench",              # bundled criteria (or a path to your own .md)
     n_verifications=8,                 # repeated verifications per criterion
-    pivots=2,                          # O(N·k) tournament, k = pivots
+    pivots=2,                          # O(Nk²) tournament, k = pivots
 )
 
 print("Best rollout:", result.index)
-print("Verifier calls:", result.n_comparisons)   # ~N·k, not N²
+print("Verifier calls:", result.n_comparisons)   # O(Nk²), not N²
 ```
 
 `llm_verifier.select` samples a random ring pass (so the verifier's slot bias
 cancels), picks the empirical leaders as pivots, scores only the directed pairs
-the tournament needs, and returns the winner. `criteria` is a path to a
-`prompts/*.md` file — or a list of `{"id", "name", "description"}` dicts:
+the tournament needs, and returns the winner. `criteria` is a bundled benchmark
+name (`"terminal_bench"`, `"swe_bench"`, `"medagentbench"`), a path to your own
+`*.md` file, or a list of `{"id", "name", "description"}` dicts:
 
 ```python
 result = llm_verifier.select(
@@ -115,7 +97,7 @@ result = llm_verifier.select(
 )
 ```
 
-### Score one trajectory directly
+### Score a pair of trajectories directly
 
 For the raw fine-grained reward over a pairwise comparison, drop down to the
 reward model:
@@ -175,13 +157,13 @@ Benchmarks are defined in `llm_verifier/benchmarks.py` — add or tweak one ther
 │   ├── __init__.py              #   llm_verifier.select(...): best-of-N in one call
 │   ├── benchmarks.py            #   BENCHMARKS registry (one Benchmark / launch)
 │   ├── fine_grained_reward.py   #   R(t,τ): Gemini logprob scoring + cache
-│   ├── pivot_tournament.py      #   PPT: O(N·k) selection (Bradley-Terry)
-│   ├── prompts.py               #   load criteria from prompts/*.md
-│   └── loaders.py               #   per-benchmark trajectory loaders
-├── prompts/                     # criteria + ground-truth note, human-editable
-│   ├── terminal_bench.md
-│   ├── swe_bench.md
-│   └── medagentbench.md
+│   ├── pivot_tournament.py      #   PPT: O(Nk²) selection (Bradley-Terry)
+│   ├── prompts.py               #   load criteria from criteria/*.md
+│   ├── loaders.py               #   per-benchmark trajectory loaders
+│   └── criteria/               #   bundled criteria + ground-truth notes (shipped)
+│       ├── terminal_bench.md
+│       ├── swe_bench.md
+│       └── medagentbench.md
 ├── data/                        # agent trajectories per benchmark
 ├── cache/                       # cached verifier scores (committed)
 └── results/                     # result tables (written after each run)
@@ -191,12 +173,24 @@ Benchmarks are defined in `llm_verifier/benchmarks.py` — add or tweak one ther
 
 ## How it works
 
+Most agents already *know* how to solve their tasks — repeatedly sampling
+rollouts (e.g. 100 per task) nearly solves Terminal-Bench. **The bottleneck is
+verification**: knowing *which* rollout is correct, especially on long-horizon
+tasks. Standard LLM-as-a-Judge scores too coarsely to separate strong
+solutions, often collapsing them into a tie — **27% ties on Terminal-Bench
+2.0**. LLM-as-a-Verifier removes that bottleneck with a fine-grained reward
+(§1) aggregated by a budget-efficient tournament (§2).
+
 ### 1. Fine-grained reward
 
-Rather than collapsing each judgement into a single discrete label (as in
-LLM-as-a-Judge), LLM-as-a-Verifier reads the verifier's probability
-distribution over an ordered set of score tokens and takes its expectation. The
-reward of trajectory `τ` on task `t` is
+For a task `t`, criterion `c`, and two candidate trajectories `a` and `b`, the
+verifier sees both in a single pairwise prompt and emits an integer score for
+each in `<score_A>` / `<score_B>` tags. Rather than reading back a single
+discrete label (as in LLM-as-a-Judge), LLM-as-a-Verifier extracts the
+verifier's *logprobs* over the ordered score tokens and takes their
+expectation, turning each judgement into a continuous reward. (A letter-based
+scale is used so each score is a single token whose logprobs can be read off.)
+The reward of trajectory `τ` on task `t` is
 
 $$
 R(t, \tau)
@@ -204,15 +198,19 @@ R(t, \tau)
 \sum_{g=1}^{G} p_{\theta}(v_g \mid t, c, \tau)\,\phi(v_g)
 $$
 
-- $C$ — number of evaluation criteria (decomposed in `prompts/*.md`)
+- $C$ — number of evaluation criteria (decomposed in `llm_verifier/criteria/*.md`)
 - $K$ — number of repeated verifications
-- $G$ — number of ordered score tokens (granularity; here `g=20`, letters A–T)
+- $G$ — number of ordered score tokens (granularity; here `G=20`, letters A–T)
 - $p_{\theta}(v_g \mid t, c, \tau)$ — probability the verifier assigns to token $v_g$
 - $\phi(v_g)$ — the scalar value of score token $v_g$
 
 This lives in `llm_verifier/fine_grained_reward.py`.
 
-### 2. Pivot Preference Tournament
+### 2. Probabilistic Pivot Tournament
+
+<p align="center">
+  <img src="figures/pivot_tournament.png" alt="Probabilistic Pivot Tournament" width="100%">
+</p>
 
 To pick the best of `N` candidate trajectories, a round-robin tournament scores
 all $\binom{N}{2}$ pairs — `O(N²)`. **PPT** reaches the same selection in three
@@ -234,8 +232,22 @@ steps, scoring directed pairs (candidate `a` in slot A, `b` in slot B):
 
 Each comparison's two fine-grained rewards $(R_a, R_b)$ become a soft win via
 the Bradley-Terry model, $p(a \text{ beats } b) = \sigma(R_a - R_b)$. Total
-comparisons: $N + k(N-k) + \binom{k}{2}$ — linear in `N` for fixed `k`. This
-lives in `llm_verifier/pivot_tournament.py`.
+comparisons: $N + k(N-k) + \binom{k}{2}$ — $O(Nk^2)$, linear in `N` for fixed
+`k`. This lives in `llm_verifier/pivot_tournament.py`.
+
+### 3. Verification as a scaling axis
+
+Verification accuracy improves as you scale three independent dimensions of the
+fine-grained reward — verification, not just generation, is a test-time scaling
+axis:
+
+- **Score granularity $G$** — finer score tokens give the decoder more room to
+  project the model's belief, sharpening the separation between correct and
+  incorrect solutions (accuracy rises from 73.1% at `G=1` to 77.5% at `G=20`).
+- **Repeated verifications $K$** — averaging multiple independent passes reduces
+  variance in the reward.
+- **Criteria decomposition $C$** — splitting the evaluation into per-criterion
+  judgements gives a more discriminative overall signal.
 
 ---
 
@@ -244,6 +256,6 @@ lives in `llm_verifier/pivot_tournament.py`.
 1. Drop a loader in `llm_verifier/loaders.py` returning `tasks` as
    `{task_id: [{trial_name, reward, problem, trace}, ...]}` and register it in
    `LOADERS`.
-2. Write the criteria + ground-truth note in `prompts/<benchmark>.md`.
+2. Write the criteria + ground-truth note in `llm_verifier/criteria/<benchmark>.md`.
 3. Add a `Benchmark(...)` entry to `BENCHMARKS` in `llm_verifier/benchmarks.py` pointing
    at the loader, prompts, data, and cache, then `python run.py <benchmark>`.

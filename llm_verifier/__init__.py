@@ -1,7 +1,7 @@
 """LLM-as-a-Verifier: fine-grained reward + pivot tournament selection.
 
 The high-level entry point is `verifier.select`: given a task and a list of
-agent trajectories, it runs a Pivot Preference Tournament scored by the
+agent trajectories, it runs a Probabilistic Pivot Tournament scored by the
 fine-grained Gemini reward and returns the best trajectory. For batch /
 benchmark runs use the config-driven launcher in `run.py` instead.
 """
@@ -50,13 +50,14 @@ def select(problem, trajectories, *, criteria, ground_truth_note=None,
     """Select the best of N agent trajectories for a single task.
 
     Scores directed pairs of trajectories with the fine-grained Gemini reward
-    and aggregates them with a Pivot Preference Tournament (PPT), so the cost is
-    O(N·k) verifier comparisons rather than the O(N²) of a full round-robin.
+    and aggregates them with a Probabilistic Pivot Tournament (PPT), so the cost is
+    O(Nk²) verifier comparisons rather than the O(N²) of a full round-robin.
 
     Args:
         problem: the task description shown to the verifier.
         trajectories: list of N agent trajectories (strings) to rank.
-        criteria: path to a `prompts/*.md` file, or a list of
+        criteria: a bundled benchmark name (e.g. ``"swe_bench"``), a path to a
+            ``*.md`` criteria file, or a list of
             ``{"id", "name", "description"}`` criterion dicts.
         ground_truth_note: optional note the verifier always sees; defaults to
             the note parsed from the prompt file (or empty).

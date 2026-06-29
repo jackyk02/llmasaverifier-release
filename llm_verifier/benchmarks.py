@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 class Benchmark:
     name: str                       # human-readable title shown in the report
     loader: str                     # key into llm_verifier.loaders.LOADERS
-    prompts: str                    # path to the criteria + ground-truth note
+    prompts: str                    # bundled criteria name (llm_verifier/criteria/<name>.md) or a path
     data: dict                      # loader-specific data locations
     cache: str                      # path to the verifier-score cache (JSON)
     results: str                    # path to write the result table
@@ -28,7 +28,7 @@ BENCHMARKS = {
     "terminal_bench": Benchmark(
         name="TERMINAL-BENCH 2.0  (Capy · GPT-5.5, x5)",
         loader="terminal",
-        prompts="prompts/terminal_bench.md",
+        prompts="terminal_bench",
         criteria=["specification", "output_match", "error_signals"],
         cache="cache/cache_terminal_capy_gpt-5.5.json",
         results="results/terminal_bench_capy.txt",
@@ -37,7 +37,7 @@ BENCHMARKS = {
     "swe_bench": Benchmark(
         name="SWE-BENCH VERIFIED  (mini-swe-agent, x3)",
         loader="swe",
-        prompts="prompts/swe_bench.md",
+        prompts="swe_bench",
         criteria=["root_cause", "code_review", "verification"],
         cache="cache/cache_swebench.json",
         results="results/swe_bench.txt",
@@ -47,7 +47,7 @@ BENCHMARKS = {
     "medagentbench": Benchmark(
         name="MEDAGENTBENCH  (Opus 4.8 max-effort, x5)",
         loader="med",
-        prompts="prompts/medagentbench.md",
+        prompts="medagentbench",
         criteria=["v2_query", "v2_consistency", "v2_structure"],
         cache="cache/cache_medagentbench_opus48max.json",
         results="results/medagentbench.txt",

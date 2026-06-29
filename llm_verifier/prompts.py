@@ -1,8 +1,9 @@
 """
 Load verifier criteria + ground-truth note from a benchmark prompt file.
 
-Prompt files live in prompts/<benchmark>.md so they are easy to read and edit
-without touching code. Expected layout:
+Prompt files live in llm_verifier/criteria/<benchmark>.md (shipped with the
+package) so they are easy to read and edit without touching code. Expected
+layout:
 
     # <title>
 
@@ -25,16 +26,44 @@ case-insensitively. Each `### id — Name` heading accepts an em dash ("—"),
 en dash ("–"), or hyphen ("-") between the id and the name.
 """
 
+import os
 import re
+from importlib import resources
 
 _CRIT_HEADING = re.compile(r"^(.+?)\s*[—–-]\s*(.+)$")
 
 
+def _read_criteria(path):
+    """Resolve a criteria argument to its file contents.
+
+    Accepts either an existing filesystem path (your own ``my_criteria.md``, or
+    an absolute path) or a bare benchmark name (``"swe_bench"``) that maps to a
+    prompt bundled inside the installed package — so a plain ``pip install``
+    user does not need any files on disk.
+    """
+    if os.path.isfile(path):
+        with open(path) as f:
+            return f.read()
+    name = os.path.basename(path)
+    if not name.endswith(".md"):
+        name += ".md"
+    bundled = resources.files(__package__).joinpath("criteria", name)
+    try:
+        return bundled.read_text()
+    except (FileNotFoundError, OSError):
+        raise FileNotFoundError(
+            f"criteria {path!r} not found: not a file on disk, and no bundled "
+            f"prompt named {name!r} in llm_verifier/criteria/"
+        )
+
+
 def load_prompts(path):
     """Return (ground_truth_note, criteria) where criteria is a list of
-    {"id", "name", "description"} dicts in file order."""
-    with open(path) as f:
-        lines = f.read().splitlines()
+    {"id", "name", "description"} dicts in file order.
+
+    ``path`` may be a filesystem path or a bundled benchmark name (see
+    :func:`_read_criteria`)."""
+    lines = _read_criteria(path).splitlines()
 
     ground_truth_note = ""
     criteria = []

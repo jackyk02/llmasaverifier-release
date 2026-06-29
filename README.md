@@ -259,3 +259,17 @@ axis:
 2. Write the criteria + ground-truth note in `llm_verifier/criteria/<benchmark>.md`.
 3. Add a `Benchmark(...)` entry to `BENCHMARKS` in `llm_verifier/benchmarks.py` pointing
    at the loader, prompts, data, and cache, then `python run.py <benchmark>`.
+
+---
+
+## Adapt LLM-as-a-Verifier for your own use case
+
+Use the verifier for your own task in three steps — Claude Code does the rest
+(generates the criteria, writes a runner, and selects the best-of-N for you):
+
+1. **Add your data.** Copy your agent trajectories into `data/task_name_trajs/`.
+2. **Update naming.** Replace every `task_name` in
+   [`add_new_benchmark.md`](add_new_benchmark.md) with the name of your task.
+3. **Spin up Claude Code in this repo** (or Codex, or whatever you like — with
+   permissions disabled) and paste the contents of `add_new_benchmark.md` to let
+   it run.

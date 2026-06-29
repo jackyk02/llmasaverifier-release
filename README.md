@@ -1,5 +1,3 @@
-<h1 align="center">LLM-as-a-Verifier</h1>
-
 <p align="center">
   <img src="figures/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
 </p>

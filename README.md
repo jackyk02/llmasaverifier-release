@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD001 MD041 -->
 <p align="center">
   <picture>
-    <img alt="LLM-as-a-Verifier" src="figures/logo2.png" width=70%>
+    <img alt="LLM-as-a-Verifier" src="figures/logo2.png" width=85%>
   </picture>
 </p>
 
@@ -10,7 +10,7 @@ Any modality, Many Applications, One Unified Verification Framework
 </h3>
 
 <p align="center">
-| <a href="https://llm-as-a-verifier.ai"><b>Website</b></a> | <a href="https://docs.llm-as-a-verifier.ai"><b>Documentation</b></a> | <a href="https://arxiv.org/"><b>Paper</b></a> | <a href="https://blog.llm-as-a-verifier.ai"><b>Blog Post</b></a> | <a href="https://x.com/"><b>Twitter/X</b></a> | <a href="https://discord.gg/"><b>Discord</b></a> | <a href="https://slack.llm-as-a-verifier.ai"><b>Slack</b></a> |
+| <a href="https://llm-as-a-verifier.ai"><b>Website</b></a> | <a href="https://docs.llm-as-a-verifier.ai"><b>Documentation</b></a> | <a href="https://arxiv.org/"><b>Paper</b></a> | <a href="https://x.com/"><b>Twitter/X</b></a> | <a href="https://slack.llm-as-a-verifier.ai"><b>Slack</b></a> |
 </p>
 
 ---
@@ -55,17 +55,6 @@ To install the latest from a clone:
 ```bash
 pip install -e .
 ```
-
-The verifier is Gemini 2.5 Flash and reads token-level **logprobs**, so a
-Vertex AI key (`VERTEX_API_KEY`) is preferred; a `GEMINI_API_KEY` also works.
-Put it in a `.env` file at the repo root (or your environment):
-
-```bash
-cp .env.example .env   # then add your Vertex AI / Gemini key
-```
-
-The cached scores for all three benchmarks are committed, so reproducing the
-table above needs **no key at all** (see [Reproducing](#reproducing-the-results)).
 
 ---
 

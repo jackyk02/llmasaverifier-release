@@ -1,3 +1,20 @@
+<!-- markdownlint-disable MD001 MD041 -->
+<p align="center">
+  <picture>
+    <img alt="LLM-as-a-Verifier" src="figures/logo2.png" width=70%>
+  </picture>
+</p>
+
+<h3 align="center">
+Any modality, Many Applications, One Unified Verification Framework
+</h3>
+
+<p align="center">
+| <a href="https://llm-as-a-verifier.ai"><b>Website</b></a> | <a href="https://docs.llm-as-a-verifier.ai"><b>Documentation</b></a> | <a href="https://arxiv.org/"><b>Paper</b></a> | <a href="https://blog.llm-as-a-verifier.ai"><b>Blog Post</b></a> | <a href="https://x.com/"><b>Twitter/X</b></a> | <a href="https://discord.gg/"><b>Discord</b></a> | <a href="https://slack.llm-as-a-verifier.ai"><b>Slack</b></a> |
+</p>
+
+---
+<!-- 
 <p align="center">
   <img src="figures/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
 </p>
@@ -25,7 +42,7 @@ agents, SWE tasks, medical agents, tool-use trajectories, and more.
 | SWE-bench Verified | mini-swe-agent (×3) | 76.1% | **78.2%** | 84.4% |
 | MedAgentBench | Claude-Opus-4.8 max-effort (×5) | 70.2% | **73.3%** | 75.0% |
 
----
+--- -->
 
 ## Installation
 

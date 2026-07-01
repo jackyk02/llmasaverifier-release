@@ -45,34 +45,6 @@ tracking, and reinforcement learning.
   <img src="figures/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
 </p>
 
-LLM-as-a-Verifier is accurate with:
-
-- Fine-grained rewards from token-level logprobs instead of coarse discrete labels
-- Scaled scoring granularity, repeated verification, and criteria decomposition
-- Pairwise reward modeling with slot-bias cancellation via randomized ring passes
-- Best-of-N selection that matches full round-robin accuracy
-
-LLM-as-a-Verifier is efficient with:
-
-- A **Probabilistic Pivot Tournament (PPT)** that selects the best of `N` rollouts in `O(Nk²)` verifier calls instead of the `O(N²)` of a full round-robin
-- Committed score caches so results reproduce in seconds with no API key
-- A single `llm_verifier.select(...)` call for best-of-N in one line
-
-LLM-as-a-Verifier is flexible and easy to use with:
-
-- One unified framework spanning many applications: coding agents, SWE tasks, medical agents, tool-use trajectories, and more
-- Bundled benchmark criteria (Terminal-Bench, SWE-bench, MedAgentBench) or your own `*.md` / dict criteria
-- Any verifier backend that exposes logprobs (Gemini 2.5 Flash via Vertex AI or the Gemini API)
-- Drop-in adaptation to new tasks with Claude Code doing the wiring
-
-### Key Results
-
-| Benchmark | Scaffold · Model | Pass@1 | LLM-as-a-Verifier | Oracle |
-|---|---|---|---|---|
-| Terminal-Bench 2.0 | Capy · GPT-5.5 (×5) | 83.1% | **86.5%** | 92.1% |
-| SWE-bench Verified | mini-swe-agent (×3) | 76.1% | **78.2%** | 84.4% |
-| MedAgentBench | Claude-Opus-4.8 max-effort (×5) | 70.2% | **73.3%** | 75.0% |
-
 ---
 
 ## Quick Start
@@ -136,6 +108,14 @@ print(r_a, r_b)   # fine-grained rewards in [0, 1]
 ---
 
 ## Reproducing the results
+
+These are the numbers each benchmark reproduces:
+
+| Benchmark | Scaffold · Model | Pass@1 | LLM-as-a-Verifier | Oracle |
+|---|---|---|---|---|
+| Terminal-Bench 2.0 | Capy · GPT-5.5 (×5) | 83.1% | **86.5%** | 92.1% |
+| SWE-bench Verified | mini-swe-agent (×3) | 76.1% | **78.2%** | 84.4% |
+| MedAgentBench | Claude-Opus-4.8 max-effort (×5) | 70.2% | **73.3%** | 75.0% |
 
 Run a benchmark by name (`python run.py` with no argument lists them):
 

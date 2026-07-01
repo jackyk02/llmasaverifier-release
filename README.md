@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD001 MD041 -->
 <p align="center">
   <picture>
-    <img alt="LLM-as-a-Verifier" src="figures/logo2.png" width=85%>
+    <img alt="LLM-as-a-Verifier" src="figures/logo2.png" width=75%>
   </picture>
 </p>
 

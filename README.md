@@ -13,7 +13,7 @@ Any modality, Many Applications, One Unified Verification Framework
 | <a href="https://llm-as-a-verifier.ai"><b>Website</b></a> | <a href="https://docs.llm-as-a-verifier.ai"><b>Documentation</b></a> | <a href="https://arxiv.org/"><b>Paper</b></a> | <a href="https://blog.llm-as-a-verifier.ai"><b>Blog</b></a> | <a href="https://x.com/"><b>Twitter/X</b></a> | <a href="https://slack.llm-as-a-verifier.ai"><b>Slack</b></a> |
 </p>
 
-🔥 LLM-as-a-Verifier achieves state-of-the-art performance across agentic benchmarks, including Terminal-Bench V2, SWE-Bench Verified, MedAgentBench, and more.
+🔥 LLM-as-a-Verifier achieves SOTA performance across agentic benchmarks, including Terminal-Bench V2, SWE-Bench Verified, and more.
 
 
 ---

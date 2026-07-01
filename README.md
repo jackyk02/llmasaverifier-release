@@ -13,36 +13,10 @@ Any modality, Many Applications, One Unified Verification Framework
 | <a href="https://llm-as-a-verifier.ai"><b>Website</b></a> | <a href="https://docs.llm-as-a-verifier.ai"><b>Documentation</b></a> | <a href="https://arxiv.org/"><b>Paper</b></a> | <a href="https://blog.llm-as-a-verifier.ai"><b>Blog</b></a> | <a href="https://x.com/"><b>Twitter/X</b></a> | <a href="https://slack.llm-as-a-verifier.ai"><b>Slack</b></a> |
 </p>
 
+🔥 LLM-as-a-Verifier achieves state-of-the-art performance across agentic benchmarks, including Terminal-Bench V2, SWE-Bench Verified, MedAgentBench, and more.
+
+
 ---
-<!-- 
-<p align="center">
-  <img src="figures/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
-</p>
-
-**LLM-as-a-Verifier** is a general-purpose verification framework that gives
-*fine-grained* feedback by scaling scoring granularity, repeated verification,
-and criteria decomposition. Unlike LLM-as-a-Judge — which collapses a judgement
-into a single discrete label — it reads the verifier's full probability
-distribution over an ordered set of score tokens and takes its expectation,
-turning every judgement into a continuous reward.
-
-Used as a trajectory reward model for test-time scaling, it selects the best of
-`N` agent rollouts per task with a **Probabilistic Pivot Tournament (PPT)** that
-costs `O(Nk²)` verifier calls instead of the `O(N²)` of a full round-robin —
-while matching round-robin accuracy.
-
-**If you can describe what "good" looks like, you can verify it**: coding
-agents, SWE tasks, medical agents, tool-use trajectories, and more.
-
-### Key Results
-
-| Benchmark | Scaffold · Model | Pass@1 | LLM-as-a-Verifier | Oracle |
-|---|---|---|---|---|
-| Terminal-Bench 2.0 | Capy · GPT-5.5 (×5) | 83.1% | **86.5%** | 92.1% |
-| SWE-bench Verified | mini-swe-agent (×3) | 76.1% | **78.2%** | 84.4% |
-| MedAgentBench | Claude-Opus-4.8 max-effort (×5) | 70.2% | **73.3%** | 75.0% |
-
---- -->
 
 ## Installation
 
@@ -55,6 +29,49 @@ To install the latest from a clone:
 ```bash
 pip install -e .
 ```
+
+---
+
+## About
+
+LLM-as-a-Verifier is a general-purpose framework that provides **fine-grained
+feedback** for any agent. The key idea is simple: 1) use fine-grained scoring
+granularity, 2) take the expectation over the full logprob distribution of LLM
+score tokens, and 3) scale repeated evaluation and criteria decomposition. The
+resulting fine-grained feedback can be used for test-time scaling, progress
+tracking, and reinforcement learning.
+
+<p align="center">
+  <img src="figures/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
+</p>
+
+LLM-as-a-Verifier is accurate with:
+
+- Fine-grained rewards from token-level logprobs instead of coarse discrete labels
+- Scaled scoring granularity, repeated verification, and criteria decomposition
+- Pairwise reward modeling with slot-bias cancellation via randomized ring passes
+- Best-of-N selection that matches full round-robin accuracy
+
+LLM-as-a-Verifier is efficient with:
+
+- A **Probabilistic Pivot Tournament (PPT)** that selects the best of `N` rollouts in `O(Nk²)` verifier calls instead of the `O(N²)` of a full round-robin
+- Committed score caches so results reproduce in seconds with no API key
+- A single `llm_verifier.select(...)` call for best-of-N in one line
+
+LLM-as-a-Verifier is flexible and easy to use with:
+
+- One unified framework spanning many applications: coding agents, SWE tasks, medical agents, tool-use trajectories, and more
+- Bundled benchmark criteria (Terminal-Bench, SWE-bench, MedAgentBench) or your own `*.md` / dict criteria
+- Any verifier backend that exposes logprobs (Gemini 2.5 Flash via Vertex AI or the Gemini API)
+- Drop-in adaptation to new tasks with Claude Code doing the wiring
+
+### Key Results
+
+| Benchmark | Scaffold · Model | Pass@1 | LLM-as-a-Verifier | Oracle |
+|---|---|---|---|---|
+| Terminal-Bench 2.0 | Capy · GPT-5.5 (×5) | 83.1% | **86.5%** | 92.1% |
+| SWE-bench Verified | mini-swe-agent (×3) | 76.1% | **78.2%** | 84.4% |
+| MedAgentBench | Claude-Opus-4.8 max-effort (×5) | 70.2% | **73.3%** | 75.0% |
 
 ---
 

@@ -1,9 +1,10 @@
 """LLM-as-a-Verifier: fine-grained reward + pivot tournament selection.
 
 The high-level entry points are `select` (pick the best of N agent
-trajectories via a Probabilistic Pivot Tournament) and `compare` (raw
-fine-grained rewards for one pairwise comparison). For batch / benchmark runs
-use the config-driven launcher in `run.py` instead.
+trajectories via a Probabilistic Pivot Tournament), `compare` (raw
+fine-grained rewards for one pairwise comparison), and `track` (progress
+curve over a single trajectory's steps). For batch / benchmark runs use the
+config-driven launcher in `run.py` instead.
 """
 
 from __future__ import annotations
@@ -27,12 +28,16 @@ from llm_verifier.fine_grained_reward import (
     score_directed_pairs,
     score_pair_criterion,
 )
+from llm_verifier.progress import ProgressResult, ProgressTracker, track
 from llm_verifier.prompts import load_prompts, normalize_criteria
 
 __all__ = [
     "select",
     "compare",
+    "track",
+    "ProgressTracker",
     "VerifierResult",
+    "ProgressResult",
     "MissingAPIKeyError",
     "GRANULARITY",
     "DEFAULT_MODEL",

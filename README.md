@@ -147,11 +147,71 @@ Use the verifier for your own task in three steps — Claude Code does the rest
 
 ---
 
+## Progress Tracking
+
+The same fine-grained reward can score a trajectory *at every step*, not just
+at the end. `track` shows the verifier the task and the numbered agent steps,
+and asks at each checkpoint whether the agent's current state would already
+satisfy the task's hidden grader. One verifier call scores all checkpoints;
+`n_verifications` repeats are averaged into a progress curve in [0, 1]:
+
+```python
+result = llm_verifier.track(
+    problem=problem,
+    steps=agent_steps,       # one string per agent step (action + observed output)
+    n_verifications=16,      # repeats K; the curve is their mean
+)
+
+print(result.steps)          # checkpoint step numbers
+print(result.scores)         # progress score after each step
+print(result.final)          # score at the last checkpoint
+```
+
+The curve separates runs long before the grader does. Below, two **Terminus 2**
+runs of the Terminal-Bench 2 task **`pytorch-model-cli`** (Gemini 2.5 Pro base
+model, K=16): the successful run stays near 0 while it reads the code and
+installs the toolchain, climbs as the right artifacts appear, and peaks once
+its verification passes — the failed run of the same task hits a disk-space
+wall, plateaus on a broken compilation, and never catches up. Bands are ±1 std
+over the K repeats; steps and scores are normalized to [0, 1].
+
+<p align="center">
+  <img src="figures/progress_pytorch_model_cli.png" alt="Progress curves for two pytorch-model-cli runs" width="100%">
+</p>
+
+Reproduce this figure with:
+
+```bash
+python plot_progress.py cache/progress_pytorch-model-cli_k16.json
+```
+
+### Online progress tracking
+
+`track` scores a finished trajectory (one verifier call per repeat, which
+shows the verifier the whole trajectory). For an agent that is **still
+running**, use `ProgressTracker`: each `update` scores only the steps taken
+so far, so the verifier structurally cannot peek at the future — at the cost
+of one scoring call per step per repeat.
+
+```python
+tracker = llm_verifier.ProgressTracker(problem, n_verifications=4)
+
+for step in agent_run():                 # as the agent executes
+    score = tracker.update(step)         # progress in [0, 1] so far
+    if tracker.steps[-1] >= 8 and score < 0.05:
+        break                            # abandon a hopeless rollout early
+
+result = tracker.result()                # same shape as track()'s
+```
+
+---
+
 ## Directory Structure
 
 ```
 .
 ├── run.py                       # registry-driven launcher
+├── plot_progress.py             # render progress-trace figures from track() curves
 ├── criteria/                    # verifier criteria + ground-truth notes
 │   ├── TEMPLATE.md              #   copy this to write your own
 │   ├── terminal_bench.md
@@ -161,7 +221,8 @@ Use the verifier for your own task in three steps — Claude Code does the rest
 │   ├── __init__.py              #   llm_verifier.select(...) / .compare(...)
 │   ├── __main__.py              #   python -m llm_verifier <file.md>: preview criteria
 │   ├── benchmarks.py            #   BENCHMARKS registry (one Benchmark / launch)
-│   ├── fine_grained_reward.py   #   R(t,τ): Gemini logprob scoring + cache
+│   ├── fine_grained_reward.py   #   R(x,τ): Gemini logprob scoring + cache
+│   ├── progress.py              #   llm_verifier.track(...): per-step progress curve
 │   ├── pivot_tournament.py      #   PPT: O(Nk²) selection (Bradley-Terry)
 │   ├── prompts.py               #   load criteria/*.md + normalize criteria args
 │   └── loaders.py               #   per-benchmark trajectory loaders

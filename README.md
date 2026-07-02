@@ -59,9 +59,7 @@ import llm_verifier
 
 problem = "Write a function that reverses a string."
 candidates = [
-    "def rev(s): return s[::-1]",
-    "def rev(s): return s",
-    "def rev(s): return ''.join(sorted(s))",
+    "def rev(s): return s[::-1]", "def rev(s): return s", "def rev(s): return ''.join(sorted(s))",
 ]
 
 result = llm_verifier.select(
@@ -181,52 +179,44 @@ Use the verifier for your own task in three steps — Claude Code does the rest
 
 ## Progress Tracking for Coding Agents
 
-The same fine-grained reward can score a trajectory *at every step*. `track` shows the verifier the task and the agent steps, and asks at each checkpoint whether the agent's current state complete the task:
+The same fine-grained reward can score a trajectory *at every step* (see
+[`track` in the Quickstart](#fine-grained-progress-tracking)). Below, we track two Terminus-2 runs of the Terminal-Bench task `pytorch-model-cli`. The successful trajectory exhibits consistently increasing verifier scores, whereas the failed trajectory is characterized by erroneous behaviors, resulting in lower scores throughout the execution. Reproduce it with:
 
-```python
-result = llm_verifier.track(
-    problem=problem,
-    steps=agent_steps,       # one string per agent step (action + observed output)
-    n_evaluations=16,      # K repeated evaluations
-)
-
-print(result.steps)          # checkpoint step numbers
-print(result.scores)         # progress score after each step
-print(result.final)          # score at the last checkpoint
+```bash
+python terminal_bench_progress.py    # scores both runs then plots
 ```
-
-The curve separates runs long before the grader does. Below, two **Terminus 2**
-runs of the Terminal-Bench 2 task **`pytorch-model-cli`** (Gemini 2.5 Pro base
-model, K=16): the successful run stays near 0 while it reads the code and
-installs the toolchain, climbs as the right artifacts appear, and peaks once
-its verification passes — the failed run of the same task hits a disk-space
-wall, plateaus on a broken compilation, and never catches up. Bands are ±1 std
-over the K repeats; steps and scores are normalized to [0, 1].
 
 <p align="center">
   <img src="figures/progress_pytorch_model_cli.png" alt="Progress curves for two pytorch-model-cli runs" width="100%">
 </p>
 
-Reproduce this figure with:
-
-```bash
-python plot_progress.py cache/progress_pytorch-model-cli_k16.json
-```
 
 ### Online progress tracking
 
-`track` scores a finished trajectory (one verifier call per repeat, which
-shows the verifier the whole trajectory). For an agent that is **still
-running**, use `ProgressTracker`: each `update` scores only the steps taken
-so far, so the verifier structurally cannot peek at the future — at the cost
-of one scoring call per step per repeat.
+`track` scores a **finished** trajectory. To monitor an agent **while it
+runs**, use `ProgressTracker`: feed it each step as it happens and get a live
+progress score back — e.g. to stop a hopeless rollout early or decide when to
+resample. Since the verifier only ever sees the steps so far, it cannot peek
+at the future.
 
 ```python
 tracker = llm_verifier.ProgressTracker(problem, n_evaluations=4)
 
-for step in agent_run():                 # as the agent executes
-    score = tracker.update(step)         # progress in [0, 1] so far
-result = tracker.result()                # same shape as track()'s
+score = tracker.update('Read the problem statement')            # 0.00002
+score = tracker.update('Wrote def rev(s): return s')            # 0.00013
+score = tracker.update('Changed to def rev(s): return s[::-1]') # 0.73938
+score = tracker.update('Tested: rev("abc") returned "cba"')     # 0.98604
+
+if score < 0.05:      # after any step: abandon a hopeless rollout early
+    ...
+```
+
+Replay the two Terminal-Bench trajectories step-by-step through
+`ProgressTracker` — printing a live score bar after every step, as an agent
+harness would see it:
+
+```bash
+python terminal_bench_progress.py --online
 ```
 
 ---
@@ -236,7 +226,7 @@ result = tracker.result()                # same shape as track()'s
 ```
 .
 ├── run.py                       # registry-driven launcher
-├── plot_progress.py             # render progress-trace figures from track() curves
+├── terminal_bench_progress.py   # re-score + plot the progress-tracking example
 ├── criteria/                    # verifier criteria + ground-truth notes
 │   ├── TEMPLATE.md              #   copy this to write your own
 │   ├── terminal_bench.md

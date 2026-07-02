@@ -3,7 +3,7 @@
 ```text
 .
 ├── run.py                       # registry-driven launcher
-├── plot_progress.py             # render progress-trace figures from track() curves
+├── terminal_bench_progress.py   # re-score + plot the progress-tracking example
 ├── add_new_benchmark.md         # paste-into-Claude-Code recipe for new tasks
 ├── criteria/                    # verifier criteria + ground-truth notes
 │   ├── TEMPLATE.md              #   copy this to write your own

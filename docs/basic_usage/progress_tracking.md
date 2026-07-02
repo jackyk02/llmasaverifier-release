@@ -32,10 +32,12 @@ Bands are ±1 std over the K repeats; steps and scores are normalized to [0, 1].
 
 <img src="../_static/image/progress_pytorch_model_cli.png" alt="Progress curves for two pytorch-model-cli runs" width="100%">
 
-Reproduce this figure from the repository with:
+Reproduce this figure from the repository with (`--plot-only` renders the
+committed curves without an API key; drop it to re-score from the raw
+trajectories in `data/tacking_examples/`):
 
 ```bash
-python plot_progress.py cache/progress_pytorch-model-cli_k16.json
+python terminal_bench_progress.py --plot-only
 ```
 
 ## Online: `ProgressTracker`

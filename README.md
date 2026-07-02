@@ -133,9 +133,7 @@ python run.py swe_bench --pivots 2 --n-verifications 8 --seed 0 --max-workers 50
 
 Benchmarks are defined in `llm_verifier/benchmarks.py` — add or tweak one there.
 
----
-
-## Adapt LLM-as-a-Verifier for your own use case
+### Adapt LLM-as-a-Verifier for your own use case
 
 Use the verifier for your own task in three steps — Claude Code does the rest
 (generates the criteria, writes a runner, and selects the best-of-N for you):

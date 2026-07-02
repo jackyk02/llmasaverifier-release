@@ -49,36 +49,29 @@ tracking, and reinforcement learning.
 
 ## Quickstart
 
-### Select the best of N candidates
+### Simple Best-of-N Selection
 
-Given a task and a pool of agent trajectories, pick the best one in a few
-lines of code.
+Run a first end-to-end selection (requires
+`VERTEX_API_KEY` in `.env`):
 
 ```python
 import llm_verifier
 
-problem = "Fix the failing test in utils.py."
-candidates = [traj_1, traj_2, traj_3, traj_4, traj_5]  # N candidates
+problem = "Write a function that reverses a string."
+candidates = [
+    "def rev(s): return s[::-1]",
+    "def rev(s): return s",
+    "def rev(s): return ''.join(sorted(s))",
+]
 
 result = llm_verifier.select(
     problem=problem,
     candidates=candidates,
-    criteria={"Root cause": "Did the agent fix the real cause?",
-              "Verification": "Did the agent confirm the fix?"},
-    model="gemini-2.5-flash",          # verifier model (needs VERTEX_API_KEY for logprobs)
-    n_verifications=4,                 # repeated evaluations per criterion
-    pivots=2,                          # pivots < N; reduced verification cost
+    criteria={"Correctness": "Does the code actually reverse the string?"},
 )
-
-print("Best candidate:", result.index)             # result.best is the candidate itself
-print("Ranking:", result.ranking)                  # all candidates, best-first
+print(result.index)   # index of the best candidate: 0
+print(result.scores)  # candidate scores: [0.73104, 0.38446, 0.38449]
 ```
-
-Under the hood, `select` runs the
-[Probabilistic Pivot Tournament](#probabilistic-pivot-tournament) to rank all
-`N` trajectories using `O(Nk²)` pairwise verifications instead of a full
-`O(N²)` round-robin. `pivots` trades cost for accuracy: more pivots = more
-comparisons = higher accuracy.
 
 ### Score a pair of trajectories directly
 
@@ -86,36 +79,44 @@ comparisons = higher accuracy.
 of a single comparison, call `compare`:
 
 ```python
-r_a, r_b = llm_verifier.compare(
-    problem, trace_a, trace_b,
-    criteria={"Overall": "Did the agent solve the task?"},
+reward_a, reward_b = llm_verifier.compare(
+    problem, candidates[0], candidates[1],
+    criteria={"Overall": "Does the code solve the problem?"},
 )
-print(r_a, r_b)   # fine-grained rewards in [0, 1]
+print(reward_a, reward_b)   # fine-grained rewards in [0, 1]: 0.99994 4.68254e-05
+```
+
+### Fine-grained Progress Tracking
+
+The same fine-grained reward can also score an agent's progress after each
+step with `track`:
+
+```python
+steps = [
+    'Read the problem statement',
+    'Wrote def rev(s): return s ',
+    'Tested: rev("abc") returned "abc"',
+    'Changed to def rev(s): return s[::-1]',
+    'Tested: rev("abc") returned "cba"',
+]
+
+result = llm_verifier.track(problem=problem, steps=steps,
+                            checkpoint_steps=[1, 2, 3, 4, 5], n_evaluations=4)
+print(result.scores)  # progress after each step: [0.00106, 0.02417, 0.03143, 0.62004, 0.99978]
 ```
 ---
 
-## Test-Time Scaling with LLM-as-a-Verifier
+## Test-Time Scaling for Agentic Benchmarks
 
 Each benchmark ships with its agent trajectories (`data/`). Expected results:
 
 | Benchmark | Base Model | Harness | Pass@1 | LLM-as-a-Verifier | Oracle |
 |---|---|---|---|---|---|
-| Terminal-Bench 2.0 | GPT-5.5 (×5) | Capy | 83.1% | **86.5%** | 92.1% |
-| SWE-bench Verified | Opus 4.5 / Opus 4.6 / Gemini 3 Flash | mini-swe-agent | 76.1% | **78.2%** | 84.4% |
-| MedAgentBench | Claude Opus 4.8 (×5) | AgentBench | 70.2% | **73.3%** | 75.0% |
+| Terminal-Bench V2 | GPT-5.5 (Best-of-5) | Capy | 83.1% | **86.5%** | 92.1% |
+| SWE-Bench Verified | Opus 4.5 / Opus 4.6 / Gemini 3 Flash (Best-of-3) | mini-swe-agent | 76.1% | **78.2%** | 84.4% |
+| MedAgentBench | Claude Opus 4.8 (Best-of-5) | AgentBench | 70.2% | **73.3%** | 75.0% |
 
-### Setup
-
-```bash
-pip install google-genai tqdm
-```
-
-Create a `.env` file with your Vertex AI API key (required for logprob
-extraction):
-
-```bash
-echo "VERTEX_API_KEY=your_key_here" > .env
-```
+### Reproduce Results
 
 Run a benchmark by name (`python run.py` with no argument lists them):
 
@@ -128,10 +129,41 @@ python run.py medagentbench
 The tournament defaults can be overridden on the command line:
 
 ```bash
-python run.py swe_bench --pivots 2 --n-verifications 8 --seed 0 --max-workers 50
+python run.py swe_bench --pivots 2 --n-evaluations 8 --seed 0 --max-workers 50
 ```
 
 Benchmarks are defined in `llm_verifier/benchmarks.py` — add or tweak one there.
+
+### Select Best of N agent trajectories
+
+Given a task and a pool of agent trajectories, pick the best one in a few
+lines of code.
+
+```python
+import llm_verifier
+
+problem = "Fix the failing test in utils.py."
+candidates = [traj_1, traj_2, traj_3, traj_4, traj_5]
+
+result = llm_verifier.select(
+    problem=problem,
+    candidates=candidates,
+    criteria={"Root cause": "Did the agent fix the real cause?",
+              "Verification": "Did the agent confirm the fix?"},
+    model="gemini-2.5-flash",          # verifier model
+    n_evaluations=4,                 # repeated evaluations per criterion
+    pivots=2,                          # pivots < N; reduced verification cost
+)
+
+print("Best candidate:", result.index)            
+print("Ranking:", result.ranking)                
+```
+
+Under the hood, `select` runs the
+[Probabilistic Pivot Tournament](#probabilistic-pivot-tournament) to rank all
+`N` trajectories using `O(Nk²)` pairwise verifications instead of a full
+`O(N²)` round-robin. `pivots` trades cost for accuracy: more pivots = more
+comparisons = higher accuracy.
 
 ### Adapt LLM-as-a-Verifier for your own use case
 
@@ -153,13 +185,13 @@ The same fine-grained reward can score a trajectory *at every step*, not just
 at the end. `track` shows the verifier the task and the numbered agent steps,
 and asks at each checkpoint whether the agent's current state would already
 satisfy the task's hidden grader. One verifier call scores all checkpoints;
-`n_verifications` repeats are averaged into a progress curve in [0, 1]:
+`n_evaluations` repeats are averaged into a progress curve in [0, 1]:
 
 ```python
 result = llm_verifier.track(
     problem=problem,
     steps=agent_steps,       # one string per agent step (action + observed output)
-    n_verifications=16,      # repeats K; the curve is their mean
+    n_evaluations=16,      # repeats K; the curve is their mean
 )
 
 print(result.steps)          # checkpoint step numbers
@@ -194,13 +226,10 @@ so far, so the verifier structurally cannot peek at the future — at the cost
 of one scoring call per step per repeat.
 
 ```python
-tracker = llm_verifier.ProgressTracker(problem, n_verifications=4)
+tracker = llm_verifier.ProgressTracker(problem, n_evaluations=4)
 
 for step in agent_run():                 # as the agent executes
     score = tracker.update(step)         # progress in [0, 1] so far
-    if tracker.steps[-1] >= 8 and score < 0.05:
-        break                            # abandon a hopeless rollout early
-
 result = tracker.result()                # same shape as track()'s
 ```
 

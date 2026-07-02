@@ -17,7 +17,7 @@ first score all ring pairs, then choose pivots, then score the pivot rounds.
 Usage:
     python run.py                  # list available benchmarks
     python run.py terminal_bench
-    python run.py swe_bench --pivots 2 --n-verifications 8
+    python run.py swe_bench --pivots 2 --n-evaluations 8
 """
 
 import argparse
@@ -81,7 +81,7 @@ def main():
                              "list available benchmarks.")
     parser.add_argument("--pivots", type=int, default=None,
                         help="Override config pivots k (default 2)")
-    parser.add_argument("--n-verifications", type=int, default=None,
+    parser.add_argument("--n-evaluations", type=int, default=None,
                         help="Override config repeated verifications K")
     parser.add_argument("--seed", type=int, default=None,
                         help="Override config seed for the random ring pass")
@@ -91,8 +91,8 @@ def main():
     cfg = resolve_config(args.benchmark)
 
     k = args.pivots if args.pivots is not None else cfg.pivots
-    n_reps = (args.n_verifications if args.n_verifications is not None
-              else cfg.n_verifications)
+    n_reps = (args.n_evaluations if args.n_evaluations is not None
+              else cfg.n_evaluations)
     seed = args.seed if args.seed is not None else cfg.seed
 
     # ---- criteria + ground-truth note ----

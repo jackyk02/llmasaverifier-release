@@ -3,7 +3,7 @@
 Each benchmark is a typed `Benchmark` rather than a YAML file: defaults live in
 one place, a bad field is a type/attribute error instead of a silent `None`, and
 paths/criteria are checked by your editor. `run.py <name>` looks the name up in
-`BENCHMARKS`; the CLI flags (`--pivots`, `--n-verifications`, `--seed`) still
+`BENCHMARKS`; the CLI flags (`--pivots`, `--n-evaluations`, `--seed`) still
 override the values here at launch time.
 """
 
@@ -19,7 +19,7 @@ class Benchmark:
     cache: str                      # path to the verifier-score cache (JSON)
     results: str                    # path to write the result table
     criteria: list = field(default_factory=list)  # criterion ids, in order
-    n_verifications: int = 8        # repeated verifications K per criterion
+    n_evaluations: int = 8        # repeated verifications K per criterion
     pivots: int = 2                 # number of pivots k in the tournament
     seed: int = 0                   # seed for the random ring pass
 

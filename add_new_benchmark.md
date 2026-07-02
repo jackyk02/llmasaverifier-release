@@ -35,7 +35,7 @@ Create `adapt_run.py` that:
   llm_verifier.select(
       problem, trajectories,
       criteria="task_name",
-      n_verifications=8,   # K
+      n_evaluations=8,   # K
       pivots=2,            # k
       seed=0,
       max_workers=50,      

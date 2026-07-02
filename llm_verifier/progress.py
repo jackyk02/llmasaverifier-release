@@ -59,8 +59,8 @@ class ProgressResult:
     Attributes:
         steps: 1-indexed agent-step numbers that were scored as checkpoints.
         scores: progress score in [0, 1] after each checkpoint step, averaged
-            over `n_verifications` repeats (same order as `steps`).
-        per_rep_scores: the raw per-repeat curves (n_verifications x
+            over `n_evaluations` repeats (same order as `steps`).
+        per_rep_scores: the raw per-repeat curves (n_evaluations x
             len(steps)); entries are None where a repeat produced no
             readable score for that checkpoint.
     """
@@ -234,14 +234,14 @@ def track(
     steps: Sequence[str],
     *,
     checkpoint_steps: Optional[Sequence[int]] = None,
-    n_verifications: int = 1,
+    n_evaluations: int = 1,
     max_workers: int = 8,
     model: str = DEFAULT_MODEL,
     client: Any = None,
 ) -> ProgressResult:
     """Score an agent trajectory's progress after each step.
 
-    One verifier call scores every checkpoint (repeated `n_verifications`
+    One verifier call scores every checkpoint (repeated `n_evaluations`
     times and averaged), so cost is O(K) calls regardless of trajectory
     length.
 
@@ -252,7 +252,7 @@ def track(
         checkpoint_steps: 1-indexed step numbers to score. Defaults to the
             interior steps ``2 .. T-1`` (the first and last step anchor the
             scale), or every step for trajectories with fewer than 3 steps.
-        n_verifications: independent repeats K; the returned curve is their
+        n_evaluations: independent repeats K; the returned curve is their
             mean.
         max_workers: concurrency for the K repeats.
         model: verifier model name.
@@ -275,8 +275,8 @@ def track(
         bad = [k for k in checkpoint_steps if not 1 <= k <= t]
         if bad:
             raise ValueError(f"checkpoint_steps out of range 1..{t}: {bad}")
-    if n_verifications < 1:
-        raise ValueError("n_verifications must be >= 1")
+    if n_evaluations < 1:
+        raise ValueError("n_evaluations must be >= 1")
     if client is None:
         client = create_gemini_client()
 
@@ -288,12 +288,12 @@ def track(
         text, tokens, position_logprobs = call_gemini(client, prompt, model)
         return extract_progress_scores(text, tokens, position_logprobs, n)
 
-    if n_verifications == 1:
+    if n_evaluations == 1:
         per_rep = [one_rep(0)]
     else:
         with ThreadPoolExecutor(
-                max_workers=min(max_workers, n_verifications)) as executor:
-            per_rep = list(executor.map(one_rep, range(n_verifications)))
+                max_workers=min(max_workers, n_evaluations)) as executor:
+            per_rep = list(executor.map(one_rep, range(n_evaluations)))
 
     scores = []
     for i in range(n):
@@ -312,10 +312,10 @@ class ProgressTracker:
     early or to decide when to branch/resample.
 
     Cost: one verifier call per repeat per update — a T-step run costs
-    T x n_verifications calls, versus n_verifications for offline `track`.
+    T x n_evaluations calls, versus n_evaluations for offline `track`.
 
     Example:
-        tracker = llm_verifier.ProgressTracker(problem, n_verifications=4)
+        tracker = llm_verifier.ProgressTracker(problem, n_evaluations=4)
         for step in agent_steps():
             score = tracker.update(step)     # progress in [0, 1] so far
             if tracker.steps[-1] >= 8 and score < 0.05:
@@ -330,15 +330,15 @@ class ProgressTracker:
         self,
         problem: str,
         *,
-        n_verifications: int = 1,
+        n_evaluations: int = 1,
         max_workers: int = 8,
         model: str = DEFAULT_MODEL,
         client: Any = None,
     ) -> None:
-        if n_verifications < 1:
-            raise ValueError("n_verifications must be >= 1")
+        if n_evaluations < 1:
+            raise ValueError("n_evaluations must be >= 1")
         self.problem = problem
-        self.n_verifications = n_verifications
+        self.n_evaluations = n_evaluations
         self.max_workers = max_workers
         self.model = model
         self.client = client if client is not None else create_gemini_client()
@@ -349,7 +349,7 @@ class ProgressTracker:
 
     def update(self, step: str) -> float:
         """Append the agent's latest step and return the progress score of
-        the trajectory so far (mean over `n_verifications` repeats)."""
+        the trajectory so far (mean over `n_evaluations` repeats)."""
         self._step_texts.append(str(step))
         k = len(self._step_texts)
         prompt = build_progress_prompt(
@@ -359,14 +359,14 @@ class ProgressTracker:
             text, tokens, lps = call_gemini(self.client, prompt, self.model)
             return extract_progress_scores(text, tokens, lps, 1)[0]
 
-        if self.n_verifications == 1:
+        if self.n_evaluations == 1:
             reps = [one_rep(0)]
         else:
             with ThreadPoolExecutor(
                     max_workers=min(self.max_workers,
-                                    self.n_verifications)) as executor:
+                                    self.n_evaluations)) as executor:
                 reps = list(executor.map(one_rep,
-                                         range(self.n_verifications)))
+                                         range(self.n_evaluations)))
 
         vals = [v for v in reps if v is not None]
         score = sum(vals) / len(vals) if vals else 0.5
@@ -382,5 +382,5 @@ class ProgressTracker:
             raise ValueError("no steps tracked yet")
         per_rep = [[self._per_step_reps[i][r]
                     for i in range(len(self.steps))]
-                   for r in range(self.n_verifications)]
+                   for r in range(self.n_evaluations)]
         return ProgressResult(list(self.steps), list(self.scores), per_rep)

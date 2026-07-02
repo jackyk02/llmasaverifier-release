@@ -105,7 +105,7 @@ def select(
     *,
     criteria: CriteriaArg,
     ground_truth_note: Optional[str] = None,
-    n_verifications: int = 8,
+    n_evaluations: int = 8,
     pivots: int = 2,
     seed: int = 0,
     max_workers: int = 50,
@@ -131,7 +131,7 @@ def select(
             of strings / ``{"id", "name", "description"}`` dicts.
         ground_truth_note: optional note the verifier always sees; defaults to
             the note parsed from the prompt file (or empty).
-        n_verifications: repeated verifications K per criterion.
+        n_evaluations: repeated verifications K per criterion.
         pivots: number of pivots k in the tournament. Keep k small relative
             to len(trajectories) — cost grows as O(Nk²), and k ≥ N degenerates
             to a full round-robin (k is clamped to N).
@@ -181,11 +181,11 @@ def select(
 
     def directed_for(scores):
         return lambda a, b: directed_reward(
-            scores, task, a, b, criteria_ids, n_verifications)
+            scores, task, a, b, criteria_ids, n_evaluations)
 
     def score_pairs(pairs):
         return score_directed_pairs(
-            lazy, tasks, {task: pairs}, crits, note, n_verifications,
+            lazy, tasks, {task: pairs}, crits, note, n_evaluations,
             max_workers, cache, model=model, progress=show_progress,
             on_error=on_error)
 
@@ -218,7 +218,7 @@ def compare(
     *,
     criteria: CriteriaArg,
     ground_truth_note: Optional[str] = None,
-    n_verifications: int = 1,
+    n_evaluations: int = 1,
     max_workers: int = 8,
     model: str = DEFAULT_MODEL,
     client: Any = None,
@@ -226,7 +226,7 @@ def compare(
     """Fine-grained rewards (R_A, R_B) in [0, 1] for one directed comparison.
 
     The verifier sees `trace_a` in slot A and `trace_b` in slot B; rewards are
-    averaged over all criteria and `n_verifications` repeats. This is the raw
+    averaged over all criteria and `n_evaluations` repeats. This is the raw
     pairwise reward `select` is built on — note the single directed call does
     not cancel slot bias the way `select`'s ring pass does.
 
@@ -236,13 +236,13 @@ def compare(
     Raises:
         MissingAPIKeyError: no credentials found and no `client` given.
     """
-    if n_verifications < 1:
-        raise ValueError("n_verifications must be >= 1")
+    if n_evaluations < 1:
+        raise ValueError("n_evaluations must be >= 1")
     note, crits = _resolve_criteria(criteria, ground_truth_note)
     if client is None:
         client = create_gemini_client()
 
-    jobs = [crit for crit in crits for _ in range(n_verifications)]
+    jobs = [crit for crit in crits for _ in range(n_evaluations)]
     if len(jobs) == 1:
         results = [score_pair_criterion(client, problem, trace_a, trace_b,
                                         jobs[0], note, model)]

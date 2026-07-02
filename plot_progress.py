@@ -4,7 +4,7 @@
 Reproduces the format of `figures/progress_pytorch_model_cli.png` (minus the
 per-step annotation boxes, which were added by hand for the README): steps
 normalized to [0, 1], scores normalized by the global max of the two mean
-curves, and a ±1 std band over the `n_verifications` repeats.
+curves, and a ±1 std band over the `n_evaluations` repeats.
 
 Usage:
     python plot_progress.py [curves.json] [out.png]

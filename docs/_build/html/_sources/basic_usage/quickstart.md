@@ -22,7 +22,7 @@ trajectories = [traj_1, traj_2, traj_3, traj_4, traj_5]  # N trajectories
 
 result = llm_verifier.select(
     problem=problem,
-    trajectories=trajectories,
+    candidates=trajectories,
     criteria={"Root cause": "Did the agent fix the real cause?",
               "Verification": "Did the agent confirm the fix?"},
     model="gemini-2.5-flash",          # verifier model (needs VERTEX_API_KEY for logprobs)

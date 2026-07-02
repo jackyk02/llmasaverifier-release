@@ -299,3 +299,49 @@ $\mathcal{O}(Nk^2)$.
    returned.
 
 This lives in `llm_verifier/pivot_tournament.py`.
+
+---
+
+## Prompt Templates
+
+### Pairwise Comparison Prompt
+
+```text
+You are an expert [domain] reviewer. You will see a task description and two
+trajectories.
+
+Evaluation Criteria: [domain specific criteria]
+
+Task: {task prompt}
+Trajectory A: {A}
+Trajectory B: {B}
+
+Carefully analyze each trajectory, then provide your final scores:
+<score_A> INTEGER_1_TO_20 </score_A>
+<score_B> INTEGER_1_TO_20 </score_B>
+
+Rating Rules: Rate correctness on a 1-20 scale based on evaluation criteria
+(1 = incorrect, 10 = borderline, 20 = correct)
+```
+
+### Progress Tracking Prompt
+
+```text
+You are an evaluator of [domain] agent attempts. Trust observed output — NOT the agent's narration.
+
+Task: {task prompt}
+Agent trajectory ({N} steps): {trajectory}
+
+You will score the trajectory at {N} checkpoints. Given everything the agent has done up to and including this step, would the agent's CURRENT state already complete the task?
+
+Score each checkpoint INDEPENDENTLY, then output exactly N lines:
+<c1> INTEGER_1_TO_20 </c1>
+...
+<cN> INTEGER_1_TO_20 </cN>
+
+Rating Rules: Rate completion on a 1-20 scale (1 = certainly not complete,
+10 = uncertain, 20 = verified complete)
+```
+
+> Note: we use a letter-based scale (A-T) instead of digits in the actual
+> implementation to enable logprob extraction for granularity scaling.

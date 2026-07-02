@@ -8,6 +8,10 @@ LLM-as-a-Verifier Documentation
   <script async defer src="https://buttons.github.io/buttons.js"></script>
   <br></br>
 
+.. image:: _static/image/llmoverview.png
+   :width: 100%
+   :alt: LLM-as-a-Verifier overview
+
 LLM-as-a-Verifier is a general-purpose verification framework that provides fine-grained,
 training-free feedback for any agent — any modality, many applications, one unified framework.
 It identifies verification as a new scaling axis for LLMs: instead of prompting a judge for a
@@ -22,10 +26,6 @@ Its core features include:
 - **State-of-the-Art Results**: Achieves SOTA test-time scaling performance on Terminal-Bench V2 (86.5%), SWE-Bench Verified (78.2%), RoboRewardBench (87.4%), and MedAgentBench (73.3%).
 - **RL-Ready Dense Rewards**: Serves as a drop-in dense reward for reinforcement learning, improving sample efficiency by ≈1.8× for SAC on LIBERO and ≈1.1× for GRPO on MATH.
 - **Simple, Extensible API**: ``llm_verifier.select``, ``compare``, and ``track`` cover best-of-N selection, pairwise scoring, and progress curves in a few lines; new benchmarks plug into a typed registry with Markdown criteria files.
-
-.. image:: _static/image/llmoverview.png
-   :width: 100%
-   :alt: LLM-as-a-Verifier overview
 
 .. toctree::
    :maxdepth: 1

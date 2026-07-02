@@ -65,7 +65,7 @@ import llm_verifier
 
 result = llm_verifier.select(
     problem="Write a function that reverses a string.",
-    trajectories=["def rev(s): return s[::-1]", "def rev(s): return s"],
+    candidates=["def rev(s): return s[::-1]", "def rev(s): return s"],
     criteria={"Correctness": "Does the code actually reverse the string?"},
 )
 print(result.index, result.scores)

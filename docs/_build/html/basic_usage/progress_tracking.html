@@ -396,7 +396,10 @@
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#offline-track">Offline: <code class="docutils literal notranslate"><span class="pre">track</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-progresstracker">Online: <code class="docutils literal notranslate"><span class="pre">ProgressTracker</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-progresstracker">Online: <code class="docutils literal notranslate"><span class="pre">ProgressTracker</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-online-scoring-prompt">The online scoring prompt</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-between-them">Choosing between them</a></li>
 </ul>
             </nav>
@@ -438,8 +441,10 @@ Below, two <strong>Terminus 2</strong> runs of the Terminal-Bench 2 task <strong
 Bands are ±1 std over the K repeats; steps and scores are normalized to [0, 1].</p>
 <a class="reference internal image-reference" href="../_images/progress_pytorch_model_cli.png"><img alt="Progress curves for two pytorch-model-cli runs" src="../_images/progress_pytorch_model_cli.png" style="width: 100%;" />
 </a>
-<p>Reproduce this figure from the repository with:</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>plot_progress.py<span class="w"> </span>cache/progress_pytorch-model-cli_k16.json
+<p>Reproduce this figure from the repository with (<code class="docutils literal notranslate"><span class="pre">--plot-only</span></code> renders the
+committed curves without an API key; drop it to re-score from the raw
+trajectories in <code class="docutils literal notranslate"><span class="pre">data/tacking_examples/</span></code>):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>terminal_bench_progress.py<span class="w"> </span>--plot-only
 </pre></div>
 </div>
 </section>
@@ -458,6 +463,79 @@ For an agent that is <strong>still running</strong>, use <code class="docutils l
 </pre></div>
 </div>
 <p>Use it to stop hopeless rollouts early or to decide when to branch or resample.</p>
+<section id="the-online-scoring-prompt">
+<h3>The online scoring prompt<a class="headerlink" href="#the-online-scoring-prompt" title="Link to this heading">#</a></h3>
+<p>Each <code class="docutils literal notranslate"><span class="pre">update</span></code> builds the neutral progress-scoring prompt below over the prefix accumulated so far, with a single checkpoint at the current step <code class="docutils literal notranslate"><span class="pre">k</span></code> (offline <code class="docutils literal notranslate"><span class="pre">track</span></code> uses the same template, with the full trajectory and one <code class="docutils literal notranslate"><span class="pre">&lt;c1&gt;…&lt;cN&gt;</span></code> line per checkpoint).
+The template never reveals whether the trajectory eventually succeeded — successes and failures see the same prompt — and the answer letter is decoded as the expectation over the verifier’s top-20 logprobs at the <code class="docutils literal notranslate"><span class="pre">&lt;c1&gt;</span></code> position:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>You are a strict, skeptical evaluator of agent task attempts. Agents routinely
+declare victory while their environment still shows errors, edit the wrong
+target, or never actually run the verification the task asks for. Trust
+observed output — NOT the agent&#39;s narration.
+
+**Task instruction:**
+{problem}
+
+**Agent trajectory ({k} agent steps; each step is one action by the agent,
+with its observed output):**
+{numbered steps 1 .. k — the prefix so far}
+
+You will score the trajectory at 1 CHECKPOINTS. The score measures exactly
+ONE thing:
+
+    &quot;Given everything the agent has done up to and including this step,
+    would the agent&#39;s CURRENT state actually satisfy the task&#39;s hidden
+    grader (i.e. produce the expected files / output / behavior the task
+    requires)?&quot;
+
+Use the 20-letter A..T scale:
+  A = certainly NO — nothing useful done yet, or the agent is going down a
+      clearly wrong path.
+  B-G = leans NO — partial work exists but key pieces are missing or broken.
+  H-M = uncertain — a plausible solution is taking shape, but no convincing
+      verification yet.
+  N-S = leans YES — the right artifacts appear to be in place and partial
+      verification has worked, with minor concerns.
+  T = essentially certain YES — the agent has run the relevant verification
+      and the observed output literally matches what the task calls for,
+      with no outstanding errors.
+
+CRITICAL CALIBRATION RULES:
+  * Effort, exploration, step count, and confident-sounding narration are
+    NOT progress. An agent that ran 20 commands and still has not produced
+    the right output deserves a score near A.
+  * Default to skepticism. The hidden grader is NOT visible to you. A result
+    with no real verification step should not exceed ~K, and even a
+    verified-looking one should rarely exceed ~R unless the verification
+    clearly matches the task&#39;s stated success criterion.
+  * Treat the agent&#39;s prose declarations (&quot;done!&quot;, &quot;all tests pass&quot;) as ZERO
+    evidence. Ground your score in the actual actions and the actual output
+    you can see.
+
+EXPECTED PATTERNS — successive checkpoints do NOT have to rise:
+  * On a trajectory that genuinely solves the task, scores typically rise
+    from A toward T.
+  * On a trajectory committed to a WRONG approach, scores should PLATEAU
+    once the wrong artifact is in place.
+  * If the agent regresses (breaks something that worked), scores should
+    DECREASE.
+
+The N checkpoints to score are:
+  Checkpoint 1 = state right after Agent Step {k}
+
+Score each checkpoint INDEPENDENTLY based on the agent&#39;s current best
+attempt at that point in the trajectory. Output EXACTLY N lines and nothing
+else, in the format:
+&lt;c1&gt;LETTER&lt;/c1&gt;
+
+where each LETTER is a single letter from A to T.
+</pre></div>
+</div>
+<p>The prompt builder lives in <code class="docutils literal notranslate"><span class="pre">llm_verifier/progress.py</span></code> (<code class="docutils literal notranslate"><span class="pre">build_progress_prompt</span></code>).</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>For progress scoring the letter scale is inverted relative to the pairwise reward scale: A = 0% progress and T = 100% progress (in pairwise scoring, A is the best score).</p>
+</div>
+</section>
 </section>
 <section id="choosing-between-them">
 <h2>Choosing between them<a class="headerlink" href="#choosing-between-them" title="Link to this heading">#</a></h2>
@@ -544,7 +622,10 @@ For an agent that is <strong>still running</strong>, use <code class="docutils l
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#offline-track">Offline: <code class="docutils literal notranslate"><span class="pre">track</span></code></a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-progresstracker">Online: <code class="docutils literal notranslate"><span class="pre">ProgressTracker</span></code></a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#online-progresstracker">Online: <code class="docutils literal notranslate"><span class="pre">ProgressTracker</span></code></a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#the-online-scoring-prompt">The online scoring prompt</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#choosing-between-them">Choosing between them</a></li>
 </ul>
   </nav></div>

@@ -15,7 +15,7 @@ from llm_verifier import (
 ```python
 def select(
     problem: str,
-    trajectories: Sequence[str],
+    candidates: Sequence[str],
     *,
     criteria: CriteriaArg,
     ground_truth_note: Optional[str] = None,
@@ -38,11 +38,11 @@ Identical inputs with the same `seed` run the identical tournament.
 **Arguments**
 
 - `problem`: the task description shown to the verifier.
-- `trajectories`: list of N agent trajectories (strings) to rank.
+- `candidates`: list of N agent trajectories (strings) to rank.
 - `criteria`: a bundled benchmark name (e.g. `"swe_bench"`), a path to a `*.md` criteria file, a `{name: description}` dict, or a list of strings / `{"id", "name", "description"}` dicts.
 - `ground_truth_note`: optional note the verifier always sees; defaults to the note parsed from the prompt file (or empty).
 - `n_evaluations`: repeated verifications K per criterion.
-- `pivots`: number of pivots k in the tournament. Keep k small relative to `len(trajectories)` — cost grows as O(Nk²), and k ≥ N degenerates to a full round-robin (k is clamped to N).
+- `pivots`: number of pivots k in the tournament. Keep k small relative to `len(candidates)` — cost grows as O(Nk²), and k ≥ N degenerates to a full round-robin (k is clamped to N).
 - `seed`: seed for the random ring pass.
 - `max_workers`: concurrency for verifier calls.
 - `model`: verifier model name (default `gemini-2.5-flash`).

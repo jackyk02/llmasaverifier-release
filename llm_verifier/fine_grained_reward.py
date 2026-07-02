@@ -23,8 +23,19 @@ import json
 import math
 import os
 import re
-import sys
 from concurrent.futures import ThreadPoolExecutor, as_completed
+
+DEFAULT_MODEL = "gemini-2.5-flash"
+
+
+class MissingAPIKeyError(RuntimeError):
+    """No Vertex AI credentials found in the environment.
+
+    Set ``VERTEX_API_KEY`` (in the environment or a ``.env`` file in the
+    working directory), or pass a pre-built ``google-genai`` client via the
+    ``client=`` argument. Only Vertex AI is supported — the fine-grained
+    reward needs the token-level logprobs the Vertex API exposes.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -58,8 +69,10 @@ SCALE = {
 # Gemini client
 # ---------------------------------------------------------------------------
 
-def load_dotenv(root_dir):
-    env_path = os.path.join(root_dir, ".env")
+def load_dotenv(root_dir=None):
+    """Load KEY=value pairs from `<root_dir>/.env` (default: the working
+    directory) into the environment, without overriding existing values."""
+    env_path = os.path.join(root_dir or os.getcwd(), ".env")
     if os.path.exists(env_path):
         for line in open(env_path):
             line = line.strip()
@@ -69,19 +82,23 @@ def load_dotenv(root_dir):
 
 
 def create_gemini_client():
+    """Build a ``google-genai`` client from ``VERTEX_API_KEY`` (a ``.env``
+    file in the working directory is loaded first). Only Vertex AI is
+    supported — extracting the score-token logprob distribution requires the
+    token-level logprobs the Vertex API exposes. Raises `MissingAPIKeyError`
+    if the key is not set."""
     from google import genai
+    load_dotenv()
     vertex_key = os.environ.get("VERTEX_API_KEY")
     if vertex_key:
         return genai.Client(vertexai=True, api_key=vertex_key)
-    api_key = os.environ.get("GEMINI_API_KEY")
-    if api_key:
-        return genai.Client(api_key=api_key)
-    print("Error: set GEMINI_API_KEY or VERTEX_API_KEY in .env or environment")
-    sys.exit(1)
+    raise MissingAPIKeyError(
+        "set VERTEX_API_KEY in .env or environment (Vertex AI only — "
+        "logprob extraction needs the Vertex API)")
 
 
-def call_gemini(client, prompt, top_logprobs=20):
-    """Call Gemini 2.5 Flash with logprobs.
+def call_gemini(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
+    """Call the verifier model with logprobs.
     Returns (text, tokens, position_logprobs)."""
     from google.genai.types import (
         Content, GenerateContentConfig, Part, ThinkingConfig)
@@ -95,7 +112,7 @@ def call_gemini(client, prompt, top_logprobs=20):
     )
 
     response = client.models.generate_content(
-        model="gemini-2.5-flash",
+        model=model,
         contents=[Content(role="user", parts=[Part(text=prompt)])],
         config=config,
     )
@@ -205,12 +222,12 @@ def build_prompt(problem, trace_a, trace_b, criterion, ground_truth_note):
 
 
 def score_pair_criterion(client, problem, trace_a, trace_b, criterion,
-                         ground_truth_note):
+                         ground_truth_note, model=DEFAULT_MODEL):
     """Score (A, B) for a single criterion, returning fine-grained
     rewards (R_A, R_B) in [0, 1]."""
     prompt = build_prompt(
         problem, trace_a, trace_b, criterion, ground_truth_note)
-    text, tokens, position_logprobs = call_gemini(client, prompt)
+    text, tokens, position_logprobs = call_gemini(client, prompt, model)
     ra = extract_score(text, tokens, position_logprobs, "<score_A>")
     rb = extract_score(text, tokens, position_logprobs, "<score_B>")
     return ra, rb
@@ -264,14 +281,37 @@ class LazyClient:
 # Cached batch scoring — only the directed pairs PPT actually needs
 # ---------------------------------------------------------------------------
 
+def _progress_iter(futures, progress):
+    """Wrap `as_completed(futures)` in tqdm when progress is on and tqdm is
+    available; fall back to plain iteration otherwise."""
+    it = as_completed(futures)
+    if not progress:
+        return it, lambda **kw: None
+    try:
+        from tqdm import tqdm
+    except ImportError:
+        return it, lambda **kw: None
+    pbar = tqdm(it, total=len(futures), desc="Scoring")
+    return pbar, pbar.set_postfix
+
+
 def score_directed_pairs(lazy_client, tasks, needed_pairs, criteria,
-                         ground_truth_note, n_reps, max_workers, cache_file):
+                         ground_truth_note, n_reps, max_workers, cache_file,
+                         model=DEFAULT_MODEL, progress=True, on_error="tie"):
     """Score every (criterion, rep) for the requested directed (task, a, b)
     pairs and merge into the cache on disk.
 
     `needed_pairs` maps task_name -> iterable of directed (a, b) comparisons.
     Only comparisons missing from the cache trigger API calls, so the cost of a
-    run scales with the PPT comparison count, not C(N, 2). Returns the cache."""
+    run scales with the PPT comparison count, not C(N, 2).
+
+    `on_error` controls failed verifier calls: ``"tie"`` scores the comparison
+    0.5/0.5 for this run only (failures are **never written to the cache**, so
+    a transient API error can't become a permanent fake tie), ``"raise"``
+    re-raises the first failure. Returns the merged scores dict."""
+    if on_error not in ("tie", "raise"):
+        raise ValueError(f"on_error must be 'tie' or 'raise', got {on_error!r}")
+
     cached = {}
     if cache_file and os.path.exists(cache_file):
         with open(cache_file) as f:
@@ -289,38 +329,48 @@ def score_directed_pairs(lazy_client, tasks, needed_pairs, criteria,
                                      trials[a]["trace"], trials[b]["trace"],
                                      crit))
 
+    log = print if progress else (lambda *a, **kw: None)
+
     if not jobs:
-        print(f"  All scores cached ({len(cached)} entries)")
+        log(f"  All scores cached ({len(cached)} entries)")
         return cached
 
-    print(f"  {len(jobs)} scoring jobs ({len(cached)} cached)")
+    log(f"  {len(jobs)} scoring jobs ({len(cached)} cached)")
 
-    from tqdm import tqdm
     client = lazy_client.get()
+    # `results` is what this run sees; `cached` is what gets persisted.
+    # Error ties go into `results` only.
+    results = dict(cached)
     errors = 0
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(score_pair_criterion, client, prob, ta, tb, crit,
-                            ground_truth_note): key
+                            ground_truth_note, model): key
             for key, prob, ta, tb, crit in jobs
         }
-        pbar = tqdm(as_completed(futures), total=len(futures), desc="Scoring")
+        iterator, set_postfix = _progress_iter(futures, progress)
         save_every = max(1, len(futures) // 20)
         done = 0
 
-        for future in pbar:
+        for future in iterator:
             key = futures[future]
             try:
                 ra, rb = future.result()
-                cached[key] = {"score_A": ra, "score_B": rb}
+                entry = {"score_A": ra, "score_B": rb}
+                cached[key] = entry
+                results[key] = entry
             except Exception as e:
+                if on_error == "raise":
+                    for f in futures:
+                        f.cancel()
+                    raise
                 errors += 1
-                cached[key] = {"score_A": 0.5, "score_B": 0.5}
+                results[key] = {"score_A": 0.5, "score_B": 0.5}
                 if errors <= 3:
-                    print(f"\n  Error: {e}")
+                    log(f"\n  Error: {e}")
             done += 1
-            pbar.set_postfix(errors=errors)
+            set_postfix(errors=errors)
             if cache_file and done % save_every == 0:
                 with open(cache_file, "w") as f:
                     json.dump(cached, f)
@@ -329,5 +379,5 @@ def score_directed_pairs(lazy_client, tasks, needed_pairs, criteria,
         with open(cache_file, "w") as f:
             json.dump(cached, f)
 
-    print(f"  Done ({errors} errors)")
-    return cached
+    log(f"  Done ({errors} errors)")
+    return results

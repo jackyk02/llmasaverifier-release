@@ -12,7 +12,7 @@ success/failure label.
 
 ## 2. Generate criteria
 
-Write `llm_verifier/criteria/task_name.md` using the exact format the loader
+Write `criteria/task_name.md` using the exact format the loader
 expects:
 
 - `## Ground Truth Note`
@@ -54,7 +54,8 @@ existing `results/` convention.
 
 ## 4. Check credentials
 
-Confirm `.env` has a key (`VERTEX_API_KEY` preferred, or `GEMINI_API_KEY`). If
+Confirm `.env` has a `VERTEX_API_KEY` (Vertex AI only — logprob extraction
+needs the Vertex API). If
 not, tell me to add one — scoring is live API traffic.
 
 ## 5. Run it

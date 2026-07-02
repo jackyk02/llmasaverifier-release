@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 class Benchmark:
     name: str                       # human-readable title shown in the report
     loader: str                     # key into llm_verifier.loaders.LOADERS
-    prompts: str                    # bundled criteria name (llm_verifier/criteria/<name>.md) or a path
+    prompts: str                    # criteria name (criteria/<name>.md at repo root) or a path
     data: dict                      # loader-specific data locations
     cache: str                      # path to the verifier-score cache (JSON)
     results: str                    # path to write the result table
@@ -48,19 +48,13 @@ BENCHMARKS = {
         name="MEDAGENTBENCH  (Opus 4.8 max-effort, x5)",
         loader="med",
         prompts="medagentbench",
-        criteria=["v2_query", "v2_consistency", "v2_structure"],
+        criteria=["query", "consistency", "structure"],
         cache="cache/cache_medagentbench_opus48max.json",
         results="results/medagentbench.txt",
         data={
-            "test_data": "data/medagentbench/test_data_v2.json",
-            "output_dir": "data/medagentbench/outputs/ClaudeOpus48MaxThink",
-            "run_names": [
-                "claude-opus-4.8-think-max-run4",
-                "claude-opus-4.8-think-max-run5",
-                "claude-opus-4.8-think-max-run6",
-                "claude-opus-4.8-think-max-run7",
-                "claude-opus-4.8-think-max-run8",
-            ],
+            "test_data": "data/medagentbench/problems.json",
+            "output_dir": "data/medagentbench/trajs/opus-4.8-max",
+            "run_names": ["run1", "run2", "run3", "run4", "run5"],
         },
     ),
 }

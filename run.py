@@ -4,7 +4,7 @@ Run LLM-as-a-Verifier on a benchmark from the registry in llm_verifier/benchmark
 
 Pipeline:
   1. Load the benchmark trajectories (llm_verifier/loaders.py).
-  2. Load the verifier criteria + ground-truth note (llm_verifier/criteria/<benchmark>.md).
+  2. Load the verifier criteria + ground-truth note (criteria/<benchmark>.md).
   3. For every "swing" task (where the N trials disagree), run a Probabilistic
      Pivot Tournament (llm_verifier/pivot_tournament.py): a random ring pass,
      pivots = empirical leaders, then pivot rounds. Only the directed pairs the
@@ -32,6 +32,7 @@ from llm_verifier.benchmarks import BENCHMARKS
 from llm_verifier.fine_grained_reward import (
     GRANULARITY,
     LazyClient,
+    MissingAPIKeyError,
     directed_reward,
     load_dotenv,
     score_directed_pairs,
@@ -208,4 +209,8 @@ def _abs(path):
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except MissingAPIKeyError as e:
+        print(f"Error: {e}")
+        sys.exit(1)

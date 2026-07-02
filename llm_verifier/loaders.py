@@ -279,10 +279,9 @@ def load_med(data, root):
 
     reward_lookup = {}
     for run_name in run_names:
-        overall_path = os.path.join(
-            output_dir, run_name, "medagentbench-std", "overall.json")
-        if os.path.exists(overall_path):
-            with open(overall_path) as f:
+        results_path = os.path.join(output_dir, run_name, "results.json")
+        if os.path.exists(results_path):
+            with open(results_path) as f:
                 overall = json.load(f)
             for r in overall.get("custom", overall).get("raw_results", []):
                 status = r.get("status", "")
@@ -291,12 +290,12 @@ def load_med(data, root):
 
     tasks = {}
     for run_name in run_names:
-        runs_path = os.path.join(
-            output_dir, run_name, "medagentbench-std", "runs.jsonl")
-        if not os.path.exists(runs_path):
-            print(f"  Warning: {runs_path} not found, skipping")
+        trajs_path = os.path.join(
+            output_dir, run_name, "trajectories.jsonl")
+        if not os.path.exists(trajs_path):
+            print(f"  Warning: {trajs_path} not found, skipping")
             continue
-        with open(runs_path) as f:
+        with open(trajs_path) as f:
             for line in f:
                 try:
                     d = json.loads(line.strip())

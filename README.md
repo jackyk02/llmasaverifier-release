@@ -49,7 +49,7 @@ tracking, and reinforcement learning.
 
 ## Quickstart
 
-### Select the best of N agent trajectories
+### Select the best of N candidates
 
 Given a task and a pool of agent trajectories, pick the best one in a few
 lines of code.
@@ -58,11 +58,11 @@ lines of code.
 import llm_verifier
 
 problem = "Fix the failing test in utils.py."
-trajectories = [traj_1, traj_2, traj_3, traj_4, traj_5]  # N trajectories
+candidates = [traj_1, traj_2, traj_3, traj_4, traj_5]  # N candidates
 
 result = llm_verifier.select(
     problem=problem,
-    trajectories=trajectories,
+    candidates=candidates,
     criteria={"Root cause": "Did the agent fix the real cause?",
               "Verification": "Did the agent confirm the fix?"},
     model="gemini-2.5-flash",          # verifier model (needs VERTEX_API_KEY for logprobs)
@@ -70,8 +70,8 @@ result = llm_verifier.select(
     pivots=2,                          # pivots < N; reduced verification cost
 )
 
-print("Best trajectory:", result.index)           # result.best is the trajectory itself
-print("Ranking:", result.ranking)                 # all trajectories, best-first
+print("Best candidate:", result.index)             # result.best is the candidate itself
+print("Ranking:", result.ranking)                  # all candidates, best-first
 ```
 
 Under the hood, `select` runs the

@@ -101,7 +101,7 @@ def _default_progress(progress: Optional[bool]) -> bool:
 
 def select(
     problem: str,
-    trajectories: Sequence[str],
+    candidates: Sequence[str],
     *,
     criteria: CriteriaArg,
     ground_truth_note: Optional[str] = None,
@@ -125,7 +125,7 @@ def select(
 
     Args:
         problem: the task description shown to the verifier.
-        trajectories: list of N agent trajectories (strings) to rank.
+        candidates: list of N agent trajectories (strings) to rank.
         criteria: a bundled benchmark name (e.g. ``"swe_bench"``), a path to a
             ``*.md`` criteria file, a ``{name: description}`` dict, or a list
             of strings / ``{"id", "name", "description"}`` dicts.
@@ -160,11 +160,11 @@ def select(
     criteria_ids = [c["id"] for c in crits]
     show_progress = _default_progress(progress)
 
-    n = len(trajectories)
+    n = len(candidates)
     if n == 0:
-        raise ValueError("need at least one trajectory")
+        raise ValueError("need at least one candidate")
     if n == 1:
-        return VerifierResult(0, trajectories[0], [1.0], 0, criteria_ids)
+        return VerifierResult(0, candidates[0], [1.0], 0, criteria_ids)
 
     if cache:
         cache_dir = os.path.dirname(os.path.abspath(cache))
@@ -173,7 +173,7 @@ def select(
     # One synthetic task holding the N candidate trajectories.
     task = "task"
     tasks = {task: [{"problem": problem, "trace": t, "reward": 0}
-                    for t in trajectories]}
+                    for t in candidates]}
 
     lazy = LazyClient()
     if client is not None:
@@ -207,7 +207,7 @@ def select(
     ppt.accumulate(pr_pairs, score, w, c)
     best = max(range(n), key=lambda i: (w[i] / c[i] if c[i] else 0.0, -i))
     mean_pref = [w[i] / c[i] if c[i] else 0.0 for i in range(n)]
-    return VerifierResult(best, trajectories[best], mean_pref,
+    return VerifierResult(best, candidates[best], mean_pref,
                           len(ring) + len(pr_pairs), criteria_ids)
 
 

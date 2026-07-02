@@ -179,19 +179,15 @@ Use the verifier for your own task in three steps — Claude Code does the rest
 
 ---
 
-## Progress Tracking
+## Progress Tracking for Coding Agents
 
-The same fine-grained reward can score a trajectory *at every step*, not just
-at the end. `track` shows the verifier the task and the numbered agent steps,
-and asks at each checkpoint whether the agent's current state would already
-satisfy the task's hidden grader. One verifier call scores all checkpoints;
-`n_evaluations` repeats are averaged into a progress curve in [0, 1]:
+The same fine-grained reward can score a trajectory *at every step*. `track` shows the verifier the task and the agent steps, and asks at each checkpoint whether the agent's current state complete the task:
 
 ```python
 result = llm_verifier.track(
     problem=problem,
     steps=agent_steps,       # one string per agent step (action + observed output)
-    n_evaluations=16,      # repeats K; the curve is their mean
+    n_evaluations=16,      # K repeated evaluations
 )
 
 print(result.steps)          # checkpoint step numbers

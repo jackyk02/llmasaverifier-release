@@ -32,7 +32,7 @@ BENCHMARKS = {
         criteria=["specification", "output_match", "error_signals"],
         cache="cache/cache_terminal_capy_gpt-5.5.json",
         results="results/terminal_bench_capy.txt",
-        data={"agent_dir": "data/terminal_trajs/capy_gpt-5.5"},
+        data={"agent_dir": "data/terminal_bench_trajs/capy_gpt-5.5"},
     ),
     "swe_bench": Benchmark(
         name="SWE-BENCH VERIFIED  (mini-swe-agent, x3)",
@@ -52,8 +52,8 @@ BENCHMARKS = {
         cache="cache/cache_medagentbench_opus48max.json",
         results="results/medagentbench.txt",
         data={
-            "test_data": "data/medagentbench/problems.json",
-            "output_dir": "data/medagentbench/trajs/opus-4.8-max",
+            "test_data": "data/medagentbench_trajs/problems.json",
+            "output_dir": "data/medagentbench_trajs/trajs/opus-4.8-max",
             "run_names": ["run1", "run2", "run3", "run4", "run5"],
         },
     ),

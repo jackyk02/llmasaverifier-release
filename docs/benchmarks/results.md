@@ -6,7 +6,7 @@ LLM-as-a-Verifier achieves state-of-the-art performance across coding, robotics,
 
 ## Test-time scaling
 
-Across challenging benchmarks such as Terminal-Bench V2, SWE-Bench Verified, and MedAgentBench, LLM-as-a-Verifier outperforms frontier models including Claude Opus 4.8, GPT-5.5, and Gemini models.
+Across challenging benchmarks such as Terminal-Bench V2, SWE-Bench Verified, and MedAgentBench, LLM-as-a-Verifier — using **Gemini 2.5 Flash** as the verifier model — outperforms frontier models including Claude Opus 4.8, GPT-5.5, and Gemini models.
 Results for Terminal-Bench and SWE-Bench are reported from the official leaderboards.
 
 | Benchmark | Baseline #1 | Baseline #2 | Baseline #3 | Pass@1 | Oracle | Ours |

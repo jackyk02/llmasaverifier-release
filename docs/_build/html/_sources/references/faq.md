@@ -1,10 +1,19 @@
 # Frequently Asked Questions
 
-## Why do I need a Vertex AI API key?
+## Which verifier backends are supported?
 
-The continuous reward is the expectation over the verifier's **token-level logprobs** at the `<score_A>` / `<score_B>` positions.
-Logprob extraction for Gemini models is only available through the Vertex AI API, so the default client is created from `VERTEX_API_KEY`.
-You can pass your own pre-built `google-genai` client via the `client` argument instead.
+The continuous reward is the expectation over the verifier's **token-level logprobs** at the `<score_A>` / `<score_B>` positions, so the backend must expose logprobs.
+Two backends are picked automatically from the environment:
+
+- **OpenAI-compatible server** (vLLM / SGLang / OpenAI) when `OPENAI_BASE_URL` is set — e.g. `vllm serve Qwen/Qwen3.5-9B` and `export OPENAI_BASE_URL=http://localhost:8000/v1`. The served model is auto-detected, so no `model=` argument is needed.
+- **Gemini via Vertex AI** otherwise, from `VERTEX_API_KEY` (logprob extraction for Gemini requires the Vertex API).
+
+You can also pass your own pre-built `openai` or `google-genai` client via the `client` argument.
+
+## Can I use a local open model as the verifier?
+
+Yes — serve it with vLLM (or SGLang) and point `OPENAI_BASE_URL` at it; see [Set up a verifier backend](../get_started/install.md#set-up-a-verifier-backend).
+On this backend the score tags are **prefilled** and the score position is constrained to the 20 scale letters via structured outputs, so the extracted distribution stays calibrated even for models that don't reliably follow the tag format.
 
 ## Can I use GPT or Claude as the verifier?
 

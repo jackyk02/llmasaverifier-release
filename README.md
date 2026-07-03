@@ -52,7 +52,10 @@ tracking, and reinforcement learning.
 ### Simple Best-of-N Selection
 
 Run a first end-to-end selection (requires
-`VERTEX_API_KEY` in `.env`):
+`VERTEX_API_KEY` in `.env`, or an OpenAI-compatible server that returns
+logprobs — e.g. `vllm serve Qwen/Qwen3.5-9B` with
+`OPENAI_BASE_URL=http://localhost:8000/v1`; the served model is
+auto-detected):
 
 ```python
 import llm_verifier
@@ -106,7 +109,9 @@ print(result.scores)  # progress after each step: [0.00106, 0.02417, 0.03143, 0.
 
 ## Test-Time Scaling for Agentic Benchmarks
 
-Each benchmark ships with its agent trajectories (`data/`). Expected results:
+Each benchmark ships with its agent trajectories (`data/`). We use Gemini 2.5
+Flash (`gemini-2.5-flash`, the default model) as the verifier for all
+benchmark below. Expected results:
 
 | Benchmark | Base Model | Harness | Pass@1 | LLM-as-a-Verifier | Oracle |
 |---|---|---|---|---|---|

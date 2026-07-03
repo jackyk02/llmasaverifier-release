@@ -397,7 +397,11 @@
                 <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#method-1-with-pip-or-uv">Method 1: With pip or uv</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#method-2-from-source">Method 2: From source</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-up-api-credentials">Set up API credentials</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-up-a-verifier-backend">Set up a verifier backend</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-gemini-via-vertex-ai-default">Option 1: Gemini via Vertex AI (default)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-openai-compatible-server-vllm-sglang">Option 2: OpenAI-compatible server (vLLM / SGLang)</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#verify-the-installation">Verify the installation</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-fixes-to-common-problems">Quick fixes to common problems</a></li>
 </ul>
@@ -438,9 +442,13 @@ pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </s
 </div>
 <p>Installing from source also gives you the bundled benchmarks (<code class="docutils literal notranslate"><span class="pre">run.py</span></code>, <code class="docutils literal notranslate"><span class="pre">data/</span></code>, <code class="docutils literal notranslate"><span class="pre">criteria/</span></code>) described in <a class="reference internal" href="../benchmarks/running_benchmarks.html"><span class="std std-doc">Running the Bundled Benchmarks</span></a>.</p>
 </section>
-<section id="set-up-api-credentials">
-<h2>Set up API credentials<a class="headerlink" href="#set-up-api-credentials" title="Link to this heading">#</a></h2>
-<p>LLM-as-a-Verifier extracts <strong>token-level logprobs</strong> from the verifier model, which requires the Vertex AI API (the default verifier model is <code class="docutils literal notranslate"><span class="pre">gemini-2.5-flash</span></code>).
+<section id="set-up-a-verifier-backend">
+<h2>Set up a verifier backend<a class="headerlink" href="#set-up-a-verifier-backend" title="Link to this heading">#</a></h2>
+<p>LLM-as-a-Verifier extracts <strong>token-level logprobs</strong> from the verifier model.
+Two backends are supported; the client is picked automatically from the environment.</p>
+<section id="option-1-gemini-via-vertex-ai-default">
+<h3>Option 1: Gemini via Vertex AI (default)<a class="headerlink" href="#option-1-gemini-via-vertex-ai-default" title="Link to this heading">#</a></h3>
+<p>The default verifier model is <code class="docutils literal notranslate"><span class="pre">gemini-2.5-flash</span></code>.
 Create a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in your working directory with your Vertex AI API key:</p>
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;VERTEX_API_KEY=your_key_here&quot;</span><span class="w"> </span>&gt;<span class="w"> </span>.env
 </pre></div>
@@ -449,11 +457,23 @@ Create a <code class="docutils literal notranslate"><span class="pre">.env</span
 <div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="nb">export</span><span class="w"> </span><span class="nv">VERTEX_API_KEY</span><span class="o">=</span>your_key_here
 </pre></div>
 </div>
-<p>You can also pass a pre-built <code class="docutils literal notranslate"><span class="pre">google-genai</span></code> client to any API call via the <code class="docutils literal notranslate"><span class="pre">client</span></code> argument, in which case no environment variable is needed.</p>
+</section>
+<section id="option-2-openai-compatible-server-vllm-sglang">
+<h3>Option 2: OpenAI-compatible server (vLLM / SGLang)<a class="headerlink" href="#option-2-openai-compatible-server-vllm-sglang" title="Link to this heading">#</a></h3>
+<p>Any OpenAI-compatible server that returns logprobs works as a verifier backend — e.g. a local open model served by <a class="reference external" href="https://docs.vllm.ai">vLLM</a>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>vllm<span class="w"> </span>serve<span class="w"> </span>Qwen/Qwen3.5-9B<span class="w"> </span>--port<span class="w"> </span><span class="m">8000</span>
+<span class="nb">export</span><span class="w"> </span><span class="nv">OPENAI_BASE_URL</span><span class="o">=</span>http://localhost:8000/v1
+</pre></div>
+</div>
+<p>When <code class="docutils literal notranslate"><span class="pre">OPENAI_BASE_URL</span></code> is set it takes precedence over <code class="docutils literal notranslate"><span class="pre">VERTEX_API_KEY</span></code>, and the served model is auto-detected — <code class="docutils literal notranslate"><span class="pre">select</span></code> / <code class="docutils literal notranslate"><span class="pre">compare</span></code> / <code class="docutils literal notranslate"><span class="pre">track</span></code> work without a <code class="docutils literal notranslate"><span class="pre">model=</span></code> argument.
+<code class="docutils literal notranslate"><span class="pre">OPENAI_API_KEY</span></code> is only needed for authenticated endpoints (any string works for a local vLLM server).</p>
+<p>On this backend the verifier first generates its analysis, then each <code class="docutils literal notranslate"><span class="pre">&lt;score_A&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;score_B&gt;</span></code> value is read by <strong>prefilling the tag</strong> (<code class="docutils literal notranslate"><span class="pre">continue_final_message</span></code>) with the position constrained to the 20 scale letters via structured outputs — so the extracted distribution is the renormalized belief over the scale itself, even for models that don’t reliably emit the tags.</p>
+<p>You can also pass a pre-built <code class="docutils literal notranslate"><span class="pre">openai</span></code> or <code class="docutils literal notranslate"><span class="pre">google-genai</span></code> client to any API call via the <code class="docutils literal notranslate"><span class="pre">client</span></code> argument, in which case no environment variable is needed.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Logprob extraction is only available through the Vertex AI API. If you want to use a frontier model that withholds logprobs (e.g., GPT-5.5 or Claude Opus) as the verifier, see <a class="reference internal" href="../advanced_features/logit_restricted_models.html"><span class="std std-doc">Logit-Restricted Frontier Models</span></a> for a two-stage workaround.</p>
+<p>If you want to use a frontier model that withholds logprobs (e.g., GPT-5.5 or Claude Opus) as the verifier, see <a class="reference internal" href="../advanced_features/logit_restricted_models.html"><span class="std std-doc">Logit-Restricted Frontier Models</span></a> for a two-stage workaround.</p>
 </div>
+</section>
 </section>
 <section id="verify-the-installation">
 <h2>Verify the installation<a class="headerlink" href="#verify-the-installation" title="Link to this heading">#</a></h2>
@@ -532,7 +552,11 @@ Create a <code class="docutils literal notranslate"><span class="pre">.env</span
     <ul class="visible nav section-nav flex-column">
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#method-1-with-pip-or-uv">Method 1: With pip or uv</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#method-2-from-source">Method 2: From source</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-up-api-credentials">Set up API credentials</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#set-up-a-verifier-backend">Set up a verifier backend</a><ul class="visible nav section-nav flex-column">
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-1-gemini-via-vertex-ai-default">Option 1: Gemini via Vertex AI (default)</a></li>
+<li class="toc-h3 nav-item toc-entry"><a class="reference internal nav-link" href="#option-2-openai-compatible-server-vllm-sglang">Option 2: OpenAI-compatible server (vLLM / SGLang)</a></li>
+</ul>
+</li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#verify-the-installation">Verify the installation</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#quick-fixes-to-common-problems">Quick fixes to common problems</a></li>
 </ul>

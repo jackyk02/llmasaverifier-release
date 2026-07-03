@@ -29,12 +29,13 @@ DEFAULT_MODEL = "gemini-2.5-flash"
 
 
 class MissingAPIKeyError(RuntimeError):
-    """No Vertex AI credentials found in the environment.
+    """No verifier backend found in the environment.
 
-    Set ``VERTEX_API_KEY`` (in the environment or a ``.env`` file in the
-    working directory), or pass a pre-built ``google-genai`` client via the
-    ``client=`` argument. Only Vertex AI is supported — the fine-grained
-    reward needs the token-level logprobs the Vertex API exposes.
+    Set ``OPENAI_BASE_URL`` to use an OpenAI-compatible server (e.g. vLLM or
+    SGLang), or ``VERTEX_API_KEY`` to use Gemini via Vertex AI (in the
+    environment or a ``.env`` file in the working directory), or pass a
+    pre-built client via the ``client=`` argument. Either way the backend
+    must expose token-level logprobs, which the fine-grained reward needs.
     """
 
 
@@ -95,6 +96,165 @@ def create_gemini_client():
     raise MissingAPIKeyError(
         "set VERTEX_API_KEY in .env or environment (Vertex AI only — "
         "logprob extraction needs the Vertex API)")
+
+
+# ---------------------------------------------------------------------------
+# OpenAI-compatible client (vLLM, SGLang, OpenAI, ...)
+# ---------------------------------------------------------------------------
+
+def create_openai_client(base_url=None, api_key=None):
+    """Build an ``openai`` client for any OpenAI-compatible server that
+    returns token-level logprobs (vLLM ``vllm serve``, SGLang, OpenAI).
+    ``base_url`` defaults to ``OPENAI_BASE_URL`` (e.g.
+    ``http://localhost:8000/v1`` for a local vLLM server) and ``api_key`` to
+    ``OPENAI_API_KEY`` (any string works for a local vLLM server)."""
+    from openai import OpenAI
+    load_dotenv()
+    base_url = base_url or os.environ.get("OPENAI_BASE_URL")
+    if not base_url:
+        raise MissingAPIKeyError(
+            "set OPENAI_BASE_URL to an OpenAI-compatible endpoint "
+            "(e.g. http://localhost:8000/v1 for vLLM)")
+    return OpenAI(base_url=base_url,
+                  api_key=api_key or os.environ.get("OPENAI_API_KEY", "EMPTY"))
+
+
+def create_client():
+    """Build a verifier client from the environment: an OpenAI-compatible
+    client when ``OPENAI_BASE_URL`` is set (vLLM / SGLang / OpenAI),
+    otherwise a Gemini client from ``VERTEX_API_KEY``. Raises
+    `MissingAPIKeyError` when neither is configured."""
+    load_dotenv()
+    if os.environ.get("OPENAI_BASE_URL"):
+        return create_openai_client()
+    return create_gemini_client()
+
+
+def _is_openai_client(client):
+    """OpenAI clients expose `.chat.completions`; google-genai clients
+    don't have `.chat`."""
+    return hasattr(client, "chat")
+
+
+def resolve_model(client, model=DEFAULT_MODEL):
+    """The model name to send to `client`. For an OpenAI-compatible client
+    still pointed at the Gemini default, ask the server what it serves (a
+    vLLM instance serves exactly one model) and cache the answer, so
+    ``select(...)`` works against a local server without a ``model=``
+    argument."""
+    if not _is_openai_client(client) or model != DEFAULT_MODEL:
+        return model
+    served = getattr(client, "_llm_verifier_model", None)
+    if served is None:
+        served = client.models.list().data[0].id
+        client._llm_verifier_model = served
+    return served
+
+
+def call_openai(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
+    """Call an OpenAI-compatible verifier with logprobs.
+    Returns (text, tokens, position_logprobs) — the same shape as
+    `call_gemini`, so `extract_score` works unchanged."""
+    params = dict(
+        model=resolve_model(client, model),
+        messages=[{"role": "user", "content": prompt}],
+        max_tokens=4096,
+        temperature=1.0,
+        logprobs=True,
+        top_logprobs=top_logprobs,  # the OpenAI API caps this at 20
+    )
+    try:
+        # vLLM/SGLang only: skip hybrid-thinking so score tags come fast.
+        response = client.chat.completions.create(
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}},
+            **params)
+    except Exception:
+        response = client.chat.completions.create(**params)
+
+    choice = response.choices[0]
+    text = choice.message.content or ""
+    tokens = None
+    position_logprobs = None
+
+    if choice.logprobs and choice.logprobs.content:
+        tokens, position_logprobs = [], []
+        for pos in choice.logprobs.content:
+            tokens.append(pos.token)
+            alts = [(alt.token, alt.logprob)
+                    for alt in (pos.top_logprobs or [])]
+            if not alts:
+                alts = [(pos.token, pos.logprob)]
+            position_logprobs.append(alts)
+
+    # Open models don't reliably emit the requested score tags (or fill
+    # them with digits instead of scale letters). Instead of trusting the
+    # sampled tags, keep only the analysis, then prefill each tag and read
+    # the letter distribution at exactly that position.
+    tags = [t for t in ("<score_A>", "<score_B>") if t in prompt]
+    if tags:
+        idx = min([text.find(t) for t in tags if t in (text or "")]
+                  or [len(text or "")])
+        analysis = (text or "")[:idx].rstrip()
+        text, tokens, position_logprobs = _score_tags_by_prefill(
+            client, params["model"], params["messages"], analysis, tags,
+            top_logprobs)
+
+    return text, tokens, position_logprobs
+
+
+def _score_tags_by_prefill(client, model, messages, text, tags,
+                           top_logprobs=20):
+    """Read the `<score_X>` letter distributions by prefill. For each tag,
+    continue the assistant message with the analysis plus the tag prefilled
+    (vLLM/SGLang ``continue_final_message``), constrained to the 20 scale
+    letters via structured outputs where supported, and read the verifier's
+    renormalized letter distribution at exactly that position. Returns
+    (text, tokens, position_logprobs) in the `call_gemini` shape; a server
+    without prefill support returns them tag-less (scores fall back to
+    0.5)."""
+    tokens = []
+    position_logprobs = []
+    for tag in tags:
+        prefix = (text or "") + f"\n{tag}"
+        letters = [chr(65 + i) for i in range(GRANULARITY)]
+        try:
+            # Constrain the prefilled position to the 20 score letters, so
+            # the returned top-logprobs are the renormalized distribution
+            # over the scale itself.
+            response = client.chat.completions.create(
+                model=model,
+                messages=messages + [{"role": "assistant",
+                                      "content": prefix}],
+                max_tokens=1,
+                temperature=1.0,
+                logprobs=True,
+                top_logprobs=top_logprobs,
+                extra_body={"add_generation_prompt": False,
+                            "continue_final_message": True,
+                            "structured_outputs": {"choice": letters}},
+            )
+        except Exception:
+            return text, tokens or None, position_logprobs or None
+        choice = response.choices[0]
+        letter = (choice.message.content or "").strip()
+        alts = []
+        if choice.logprobs and choice.logprobs.content:
+            pos = choice.logprobs.content[0]
+            alts = [(alt.token, alt.logprob)
+                    for alt in (pos.top_logprobs or [])]
+        closing = "</" + tag[1:]
+        text = prefix + letter + closing
+        tokens += [f"\n{tag}", letter, closing]
+        position_logprobs += [[(f"\n{tag}", 0.0)], alts, [(closing, 0.0)]]
+    return text, tokens or None, position_logprobs or None
+
+
+def call_verifier(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
+    """Backend dispatch: route to the OpenAI-compatible or Gemini call based
+    on the client type. Returns (text, tokens, position_logprobs)."""
+    if _is_openai_client(client):
+        return call_openai(client, prompt, model, top_logprobs)
+    return call_gemini(client, prompt, model, top_logprobs)
 
 
 def call_gemini(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
@@ -227,7 +387,7 @@ def score_pair_criterion(client, problem, trace_a, trace_b, criterion,
     rewards (R_A, R_B) in [0, 1]."""
     prompt = build_prompt(
         problem, trace_a, trace_b, criterion, ground_truth_note)
-    text, tokens, position_logprobs = call_gemini(client, prompt, model)
+    text, tokens, position_logprobs = call_verifier(client, prompt, model)
     ra = extract_score(text, tokens, position_logprobs, "<score_A>")
     rb = extract_score(text, tokens, position_logprobs, "<score_B>")
     return ra, rb
@@ -265,15 +425,16 @@ def directed_reward(scores, task_name, a, b, criteria_ids, n_reps):
 
 
 class LazyClient:
-    """Create the Gemini client on first use, so reproducing a fully cached
-    run never needs an API key."""
+    """Create the verifier client on first use (OpenAI-compatible when
+    ``OPENAI_BASE_URL`` is set, Gemini otherwise), so reproducing a fully
+    cached run never needs an API key."""
 
     def __init__(self):
         self._client = None
 
     def get(self):
         if self._client is None:
-            self._client = create_gemini_client()
+            self._client = create_client()
         return self._client
 
 

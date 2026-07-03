@@ -4,6 +4,8 @@ The repository ships three test-time scaling benchmarks with their agent traject
 
 ## Expected results
 
+All benchmark results use **Gemini 2.5 Flash** (`gemini-2.5-flash`, the default verifier model) as the verifier.
+
 | Benchmark | Base Model | Harness | Pass@1 | LLM-as-a-Verifier | Oracle |
 |---|---|---|---|---|---|
 | Terminal-Bench 2.0 | GPT-5.5 (×5) | Capy | 83.1% | **86.5%** | 92.1% |

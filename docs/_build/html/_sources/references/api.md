@@ -49,7 +49,7 @@ Identical inputs with the same `seed` run the identical tournament.
 - `cache`: optional path to a JSON score cache. Re-running with the same cache re-scores only the comparisons not seen before.
 - `progress`: show a progress bar / log lines. Default (`None`) shows progress only when stderr is a TTY.
 - `on_error`: `"tie"` scores a failed verifier call 0.5/0.5 for this run (never persisted to the cache); `"raise"` re-raises it.
-- `client`: a pre-built `google-genai` client (optional); by default one is created from `VERTEX_API_KEY` (Vertex AI only — logprob extraction needs the Vertex API).
+- `client`: a pre-built `openai` or `google-genai` client (optional); by default an OpenAI-compatible client is created when `OPENAI_BASE_URL` is set (vLLM / SGLang / OpenAI — the served model is auto-detected), otherwise a Gemini client from `VERTEX_API_KEY`. Either way the backend must expose token-level logprobs.
 
 **Returns** a [`VerifierResult`](#verifierresult) whose `.index` / `.best` is the chosen trajectory and `.ranking` orders all trajectories best-first.
 
@@ -165,8 +165,8 @@ class ProgressResult:
 
 - `DEFAULT_MODEL = "gemini-2.5-flash"` — the default verifier model.
 - `GRANULARITY = 20` — the number of score tokens G (the letter scale A–T).
-- `load_dotenv(root_dir=None)` — load `VERTEX_API_KEY` (and friends) from a `.env` file.
-- `MissingAPIKeyError` — raised when a verifier call needs credentials and none are available.
+- `load_dotenv(root_dir=None)` — load `VERTEX_API_KEY` / `OPENAI_BASE_URL` (and friends) from a `.env` file.
+- `MissingAPIKeyError` — raised when a verifier call needs a backend and neither `OPENAI_BASE_URL` nor `VERTEX_API_KEY` is configured.
 
 ## Command line
 

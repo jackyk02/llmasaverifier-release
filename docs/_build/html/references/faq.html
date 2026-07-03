@@ -395,7 +395,8 @@
             </div>
             <nav aria-label="Page">
                 <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-do-i-need-a-vertex-ai-api-key">Why do I need a Vertex AI API key?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#which-verifier-backends-are-supported">Which verifier backends are supported?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#can-i-use-a-local-open-model-as-the-verifier">Can I use a local open model as the verifier?</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#can-i-use-gpt-or-claude-as-the-verifier">Can I use GPT or Claude as the verifier?</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-is-this-different-from-llm-as-a-judge">How is this different from LLM-as-a-Judge?</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-much-does-a-select-call-cost">How much does a <code class="docutils literal notranslate"><span class="pre">select</span></code> call cost?</a></li>
@@ -417,11 +418,20 @@
                   
   <section class="tex2jax_ignore mathjax_ignore" id="frequently-asked-questions">
 <h1>Frequently Asked Questions<a class="headerlink" href="#frequently-asked-questions" title="Link to this heading">#</a></h1>
-<section id="why-do-i-need-a-vertex-ai-api-key">
-<h2>Why do I need a Vertex AI API key?<a class="headerlink" href="#why-do-i-need-a-vertex-ai-api-key" title="Link to this heading">#</a></h2>
-<p>The continuous reward is the expectation over the verifier’s <strong>token-level logprobs</strong> at the <code class="docutils literal notranslate"><span class="pre">&lt;score_A&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;score_B&gt;</span></code> positions.
-Logprob extraction for Gemini models is only available through the Vertex AI API, so the default client is created from <code class="docutils literal notranslate"><span class="pre">VERTEX_API_KEY</span></code>.
-You can pass your own pre-built <code class="docutils literal notranslate"><span class="pre">google-genai</span></code> client via the <code class="docutils literal notranslate"><span class="pre">client</span></code> argument instead.</p>
+<section id="which-verifier-backends-are-supported">
+<h2>Which verifier backends are supported?<a class="headerlink" href="#which-verifier-backends-are-supported" title="Link to this heading">#</a></h2>
+<p>The continuous reward is the expectation over the verifier’s <strong>token-level logprobs</strong> at the <code class="docutils literal notranslate"><span class="pre">&lt;score_A&gt;</span></code> / <code class="docutils literal notranslate"><span class="pre">&lt;score_B&gt;</span></code> positions, so the backend must expose logprobs.
+Two backends are picked automatically from the environment:</p>
+<ul class="simple">
+<li><p><strong>OpenAI-compatible server</strong> (vLLM / SGLang / OpenAI) when <code class="docutils literal notranslate"><span class="pre">OPENAI_BASE_URL</span></code> is set — e.g. <code class="docutils literal notranslate"><span class="pre">vllm</span> <span class="pre">serve</span> <span class="pre">Qwen/Qwen3.5-9B</span></code> and <code class="docutils literal notranslate"><span class="pre">export</span> <span class="pre">OPENAI_BASE_URL=http://localhost:8000/v1</span></code>. The served model is auto-detected, so no <code class="docutils literal notranslate"><span class="pre">model=</span></code> argument is needed.</p></li>
+<li><p><strong>Gemini via Vertex AI</strong> otherwise, from <code class="docutils literal notranslate"><span class="pre">VERTEX_API_KEY</span></code> (logprob extraction for Gemini requires the Vertex API).</p></li>
+</ul>
+<p>You can also pass your own pre-built <code class="docutils literal notranslate"><span class="pre">openai</span></code> or <code class="docutils literal notranslate"><span class="pre">google-genai</span></code> client via the <code class="docutils literal notranslate"><span class="pre">client</span></code> argument.</p>
+</section>
+<section id="can-i-use-a-local-open-model-as-the-verifier">
+<h2>Can I use a local open model as the verifier?<a class="headerlink" href="#can-i-use-a-local-open-model-as-the-verifier" title="Link to this heading">#</a></h2>
+<p>Yes — serve it with vLLM (or SGLang) and point <code class="docutils literal notranslate"><span class="pre">OPENAI_BASE_URL</span></code> at it; see <a class="reference internal" href="../get_started/install.html#set-up-a-verifier-backend"><span class="std std-ref">Set up a verifier backend</span></a>.
+On this backend the score tags are <strong>prefilled</strong> and the score position is constrained to the 20 scale letters via structured outputs, so the extracted distribution stays calibrated even for models that don’t reliably follow the tag format.</p>
 </section>
 <section id="can-i-use-gpt-or-claude-as-the-verifier">
 <h2>Can I use GPT or Claude as the verifier?<a class="headerlink" href="#can-i-use-gpt-or-claude-as-the-verifier" title="Link to this heading">#</a></h2>
@@ -518,7 +528,8 @@ See <a class="reference internal" href="../benchmarks/results.html"><span class=
   </div>
   <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
     <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#why-do-i-need-a-vertex-ai-api-key">Why do I need a Vertex AI API key?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#which-verifier-backends-are-supported">Which verifier backends are supported?</a></li>
+<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#can-i-use-a-local-open-model-as-the-verifier">Can I use a local open model as the verifier?</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#can-i-use-gpt-or-claude-as-the-verifier">Can I use GPT or Claude as the verifier?</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-is-this-different-from-llm-as-a-judge">How is this different from LLM-as-a-Judge?</a></li>
 <li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#how-much-does-a-select-call-cost">How much does a <code class="docutils literal notranslate"><span class="pre">select</span></code> call cost?</a></li>

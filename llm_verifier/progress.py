@@ -34,8 +34,8 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 from llm_verifier.fine_grained_reward import (
     DEFAULT_MODEL,
-    call_gemini,
-    create_gemini_client,
+    call_verifier,
+    create_client,
 )
 
 # ---------------------------------------------------------------------------
@@ -169,7 +169,9 @@ def _expected_value_from_alts(
     logprob alternatives; None if no scale letter appears."""
     vals_to_lp = {}
     for tok_str, lp in alts:
-        t = (tok_str or "").lstrip()
+        # Some BPE tokenizers merge the tag's closing ">" with the answer
+        # letter into one token (">B"); strip it so the letter still counts.
+        t = (tok_str or "").lstrip().lstrip(">").lstrip()
         if not t:
             continue
         c = t[0]
@@ -256,7 +258,7 @@ def track(
             mean.
         max_workers: concurrency for the K repeats.
         model: verifier model name.
-        client: a pre-built ``google-genai`` client (optional).
+        client: a pre-built ``openai`` or ``google-genai`` client (optional).
 
     Returns:
         A `ProgressResult` — ``.steps``, ``.scores`` (the progress curve in
@@ -278,14 +280,14 @@ def track(
     if n_evaluations < 1:
         raise ValueError("n_evaluations must be >= 1")
     if client is None:
-        client = create_gemini_client()
+        client = create_client()
 
     n = len(checkpoint_steps)
     prompt = build_progress_prompt(
         problem, format_steps(steps), t, checkpoint_steps)
 
     def one_rep(_):
-        text, tokens, position_logprobs = call_gemini(client, prompt, model)
+        text, tokens, position_logprobs = call_verifier(client, prompt, model)
         return extract_progress_scores(text, tokens, position_logprobs, n)
 
     if n_evaluations == 1:
@@ -341,7 +343,7 @@ class ProgressTracker:
         self.n_evaluations = n_evaluations
         self.max_workers = max_workers
         self.model = model
-        self.client = client if client is not None else create_gemini_client()
+        self.client = client if client is not None else create_client()
         self.steps: List[int] = []
         self.scores: List[float] = []
         self._step_texts: List[str] = []
@@ -356,7 +358,7 @@ class ProgressTracker:
             self.problem, format_steps(self._step_texts), k, [k])
 
         def one_rep(_):
-            text, tokens, lps = call_gemini(self.client, prompt, self.model)
+            text, tokens, lps = call_verifier(self.client, prompt, self.model)
             return extract_progress_scores(text, tokens, lps, 1)[0]
 
         if self.n_evaluations == 1:

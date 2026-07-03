@@ -29,9 +29,14 @@ pip install -e .
 
 Installing from source also gives you the bundled benchmarks (`run.py`, `data/`, `criteria/`) described in [Running the Bundled Benchmarks](../benchmarks/running_benchmarks.md).
 
-## Set up API credentials
+## Set up a verifier backend
 
-LLM-as-a-Verifier extracts **token-level logprobs** from the verifier model, which requires the Vertex AI API (the default verifier model is `gemini-2.5-flash`).
+LLM-as-a-Verifier extracts **token-level logprobs** from the verifier model.
+Two backends are supported; the client is picked automatically from the environment.
+
+### Option 1: Gemini via Vertex AI (default)
+
+The default verifier model is `gemini-2.5-flash`.
 Create a `.env` file in your working directory with your Vertex AI API key:
 
 ```bash
@@ -44,10 +49,24 @@ Alternatively, export it as an environment variable:
 export VERTEX_API_KEY=your_key_here
 ```
 
-You can also pass a pre-built `google-genai` client to any API call via the `client` argument, in which case no environment variable is needed.
+### Option 2: OpenAI-compatible server (vLLM / SGLang)
+
+Any OpenAI-compatible server that returns logprobs works as a verifier backend — e.g. a local open model served by [vLLM](https://docs.vllm.ai):
+
+```bash
+vllm serve Qwen/Qwen3.5-9B --port 8000
+export OPENAI_BASE_URL=http://localhost:8000/v1
+```
+
+When `OPENAI_BASE_URL` is set it takes precedence over `VERTEX_API_KEY`, and the served model is auto-detected — `select` / `compare` / `track` work without a `model=` argument.
+`OPENAI_API_KEY` is only needed for authenticated endpoints (any string works for a local vLLM server).
+
+On this backend the verifier first generates its analysis, then each `<score_A>` / `<score_B>` value is read by **prefilling the tag** (`continue_final_message`) with the position constrained to the 20 scale letters via structured outputs — so the extracted distribution is the renormalized belief over the scale itself, even for models that don't reliably emit the tags.
+
+You can also pass a pre-built `openai` or `google-genai` client to any API call via the `client` argument, in which case no environment variable is needed.
 
 ```{note}
-Logprob extraction is only available through the Vertex AI API. If you want to use a frontier model that withholds logprobs (e.g., GPT-5.5 or Claude Opus) as the verifier, see [Logit-Restricted Frontier Models](../advanced_features/logit_restricted_models.md) for a two-stage workaround.
+If you want to use a frontier model that withholds logprobs (e.g., GPT-5.5 or Claude Opus) as the verifier, see [Logit-Restricted Frontier Models](../advanced_features/logit_restricted_models.md) for a two-stage workaround.
 ```
 
 ## Verify the installation

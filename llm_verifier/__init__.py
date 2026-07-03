@@ -22,7 +22,7 @@ from llm_verifier.fine_grained_reward import (
     GRANULARITY,
     LazyClient,
     MissingAPIKeyError,
-    create_gemini_client,
+    create_client,
     directed_reward,
     load_dotenv,
     score_directed_pairs,
@@ -144,9 +144,11 @@ def select(
             progress only when stderr is a TTY.
         on_error: ``"tie"`` scores a failed verifier call 0.5/0.5 for this run
             (never persisted to the cache); ``"raise"`` re-raises it.
-        client: a pre-built ``google-genai`` client (optional); by default one
-            is created from ``VERTEX_API_KEY`` (Vertex AI only — logprob
-            extraction needs the Vertex API).
+        client: a pre-built ``openai`` or ``google-genai`` client (optional);
+            by default an OpenAI-compatible client is created when
+            ``OPENAI_BASE_URL`` is set (vLLM / SGLang / OpenAI), otherwise a
+            Gemini client from ``VERTEX_API_KEY``. Either way the backend
+            must expose token-level logprobs.
 
     Returns:
         A `VerifierResult` whose ``.index`` / ``.best`` is the chosen
@@ -240,7 +242,7 @@ def compare(
         raise ValueError("n_evaluations must be >= 1")
     note, crits = _resolve_criteria(criteria, ground_truth_note)
     if client is None:
-        client = create_gemini_client()
+        client = create_client()
 
     jobs = [crit for crit in crits for _ in range(n_evaluations)]
     if len(jobs) == 1:

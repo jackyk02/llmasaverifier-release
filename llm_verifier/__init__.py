@@ -48,6 +48,11 @@ __all__ = [
 # {name: description} mapping, or a sequence of strings / criterion dicts.
 CriteriaArg = Union[str, Mapping[str, str], Sequence[Union[str, Mapping[str, str]]]]
 
+# An images argument: one image or a sequence of images, where each image is
+# a local file path, an http(s) URL, or raw image bytes.
+ImagesArg = Union[str, bytes, "os.PathLike[str]",
+                  Sequence[Union[str, bytes, "os.PathLike[str]"]]]
+
 
 @dataclass
 class VerifierResult:
@@ -104,6 +109,7 @@ def select(
     candidates: Sequence[str],
     *,
     criteria: CriteriaArg,
+    images: Optional[ImagesArg] = None,
     ground_truth_note: Optional[str] = None,
     n_evaluations: int = 8,
     pivots: int = 2,
@@ -129,6 +135,10 @@ def select(
         criteria: a bundled benchmark name (e.g. ``"swe_bench"``), a path to a
             ``*.md`` criteria file, a ``{name: description}`` dict, or a list
             of strings / ``{"id", "name", "description"}`` dicts.
+        images: task-context image(s) the verifier sees with every comparison
+            — a single image or a list, each a local file path
+            (``images="frame.png"``), an http(s) URL, or raw bytes. Requires
+            a multimodal verifier model.
         ground_truth_note: optional note the verifier always sees; defaults to
             the note parsed from the prompt file (or empty).
         n_evaluations: repeated verifications K per criterion.
@@ -174,7 +184,8 @@ def select(
 
     # One synthetic task holding the N candidate trajectories.
     task = "task"
-    tasks = {task: [{"problem": problem, "trace": t, "reward": 0}
+    tasks = {task: [{"problem": problem, "trace": t, "reward": 0,
+                     "images": images}
                     for t in candidates]}
 
     lazy = LazyClient()
@@ -219,6 +230,7 @@ def compare(
     trace_b: str,
     *,
     criteria: CriteriaArg,
+    images: Optional[ImagesArg] = None,
     ground_truth_note: Optional[str] = None,
     n_evaluations: int = 1,
     max_workers: int = 8,
@@ -232,8 +244,10 @@ def compare(
     pairwise reward `select` is built on — note the single directed call does
     not cancel slot bias the way `select`'s ring pass does.
 
-    `criteria` accepts the same forms as `select`. A failed verifier call
-    raises (there is no tie fallback here).
+    `criteria` and `images` accept the same forms as `select` (`images` is
+    one image or a list — file paths, http(s) URLs, or raw bytes — attached
+    as task context; requires a multimodal verifier model). A failed
+    verifier call raises (there is no tie fallback here).
 
     Raises:
         MissingAPIKeyError: no credentials found and no `client` given.
@@ -247,13 +261,14 @@ def compare(
     jobs = [crit for crit in crits for _ in range(n_evaluations)]
     if len(jobs) == 1:
         results = [score_pair_criterion(client, problem, trace_a, trace_b,
-                                        jobs[0], note, model)]
+                                        jobs[0], note, model, images)]
     else:
         with ThreadPoolExecutor(max_workers=min(max_workers,
                                                 len(jobs))) as executor:
             results = list(executor.map(
                 lambda crit: score_pair_criterion(
-                    client, problem, trace_a, trace_b, crit, note, model),
+                    client, problem, trace_a, trace_b, crit, note, model,
+                    images),
                 jobs))
 
     r_a = sum(r[0] for r in results) / len(results)

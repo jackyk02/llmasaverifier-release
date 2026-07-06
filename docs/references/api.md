@@ -18,6 +18,7 @@ def select(
     candidates: Sequence[str],
     *,
     criteria: CriteriaArg,
+    images: Optional[ImagesArg] = None,
     ground_truth_note: Optional[str] = None,
     n_evaluations: int = 8,
     pivots: int = 2,
@@ -40,6 +41,7 @@ Identical inputs with the same `seed` run the identical tournament.
 - `problem`: the task description shown to the verifier.
 - `candidates`: list of N agent trajectories (strings) to rank.
 - `criteria`: a bundled benchmark name (e.g. `"swe_bench"`), a path to a `*.md` criteria file, a `{name: description}` dict, or a list of strings / `{"id", "name", "description"}` dicts.
+- `images`: task-context image(s) the verifier sees with every comparison — a single image or a list, each a local file path (`images="frame.png"`), an http(s) URL, or raw bytes. Requires a multimodal verifier model (Gemini, or a vision model behind the OpenAI-compatible server).
 - `ground_truth_note`: optional note the verifier always sees; defaults to the note parsed from the prompt file (or empty).
 - `n_evaluations`: repeated verifications K per criterion.
 - `pivots`: number of pivots k in the tournament. Keep k small relative to `len(candidates)` — cost grows as O(Nk²), and k ≥ N degenerates to a full round-robin (k is clamped to N).
@@ -64,6 +66,7 @@ def compare(
     trace_b: str,
     *,
     criteria: CriteriaArg,
+    images: Optional[ImagesArg] = None,
     ground_truth_note: Optional[str] = None,
     n_evaluations: int = 1,
     max_workers: int = 8,
@@ -74,6 +77,7 @@ def compare(
 
 Fine-grained rewards `(R_A, R_B)` in [0, 1] for one directed comparison.
 The verifier sees `trace_a` in slot A and `trace_b` in slot B; rewards are averaged over all criteria and `n_evaluations` repeats.
+`images` accepts the same forms as `select`'s (one image or a list — paths, URLs, or bytes) and is attached as task context.
 This is the raw pairwise reward `select` is built on — note the single directed call does not cancel slot bias the way `select`'s ring pass does.
 A failed verifier call raises (there is no tie fallback here).
 
@@ -84,6 +88,7 @@ def track(
     problem: str,
     steps: Sequence[str],
     *,
+    images: Optional[ImagesArg] = None,
     checkpoint_steps: Optional[Sequence[int]] = None,
     n_evaluations: int = 1,
     max_workers: int = 8,
@@ -99,6 +104,7 @@ One verifier call scores every checkpoint (repeated `n_evaluations` times and av
 
 - `problem`: the task instruction shown to the verifier.
 - `steps`: the agent's steps, one string per step (action + observed output). Truncate very long observations yourself if needed.
+- `images`: task-context image(s) attached to every scoring call — a single image or a list (paths, URLs, or bytes). For per-step frames, use `ProgressTracker` and pass images to each `update`.
 - `checkpoint_steps`: 1-indexed step numbers to score. Defaults to the interior steps `2 .. T-1` (the first and last step anchor the scale), or every step for trajectories with fewer than 3 steps.
 - `n_evaluations`: independent repeats K; the returned curve is their mean.
 - `max_workers`: concurrency for the K repeats.
@@ -113,6 +119,7 @@ class ProgressTracker:
         self,
         problem: str,
         *,
+        images: Optional[ImagesArg] = None,
         n_evaluations: int = 1,
         max_workers: int = 8,
         model: str = DEFAULT_MODEL,
@@ -125,9 +132,11 @@ Feed steps as the agent produces them; each `update` scores the trajectory prefi
 Cost: one verifier call per repeat per update — a T-step run costs `T × n_evaluations` calls, versus `n_evaluations` for offline `track`.
 Raises `MissingAPIKeyError` at construction if no credentials are found and no `client` is given.
 
+Pass `images` at construction for task-context image(s) — e.g. a goal image or reference screenshot.
+
 **Methods and attributes**
 
-- `update(step: str) -> float`: append the agent's latest step and return the progress score of the trajectory so far (mean over `n_evaluations` repeats).
+- `update(step: str, images=None) -> float`: append the agent's latest step and return the progress score of the trajectory so far (mean over `n_evaluations` repeats). `images` (one image or a list — e.g. a camera frame after this step) is attached to this step: the step text gets an `[Image i attached]` marker and the image stays part of the trajectory for all later updates.
 - `result() -> ProgressResult`: the curve so far, same shape as `track()`'s.
 - `steps` / `scores`: the checkpoint indices and scores accumulated so far.
 
@@ -163,6 +172,7 @@ class ProgressResult:
 
 ## Constants and helpers
 
+- `ImagesArg` — the type of every `images` argument: one image or a sequence of images, where each image is a local file path, an http(s) URL, or raw image bytes. Images are attached to the verifier message after the text prompt, in order; the verifier model must be multimodal. See [Multimodal Verification with Images](../multimodal/image_inputs.md).
 - `DEFAULT_MODEL = "gemini-2.5-flash"` — the default verifier model.
 - `GRANULARITY = 20` — the number of score tokens G (the letter scale A–T).
 - `load_dotenv(root_dir=None)` — load `VERTEX_API_KEY` / `OPENAI_BASE_URL` (and friends) from a `.env` file.

@@ -58,6 +58,8 @@ result = tracker.result()                # same shape as track()'s
 
 Use it to stop hopeless rollouts early or to decide when to branch or resample.
 
+Both entry points also accept images — a goal image as task context, or a camera frame per step via `tracker.update(step, images=frame)` — see [Multimodal Verification with Images](../multimodal/image_inputs.md).
+
 ### The online scoring prompt
 
 Each `update` builds the neutral progress-scoring prompt below over the prefix accumulated so far, with a single checkpoint at the current step `k` (offline `track` uses the same template, with the full trajectory and one `<c1>…<cN>` line per checkpoint).

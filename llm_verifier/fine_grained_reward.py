@@ -19,6 +19,7 @@ score-token expectation `extract_score`, the pairwise prompt, and a cached
 batch scorer that only scores the pairs a pivot tournament actually needs.
 """
 
+import base64
 import json
 import math
 import os
@@ -136,6 +137,56 @@ def _is_openai_client(client):
     return hasattr(client, "chat")
 
 
+# ---------------------------------------------------------------------------
+# Image inputs — every public API accepts `images` as one image or a list;
+# each image is a local file path, an http(s) URL, or raw bytes. Images are
+# attached to the verifier message after the text prompt, in order.
+# ---------------------------------------------------------------------------
+
+def as_image_list(images):
+    """Normalize the `images` argument: None -> [], a single image (path /
+    URL / bytes) -> [image], a sequence -> list."""
+    if images is None:
+        return []
+    if isinstance(images, (str, bytes, os.PathLike)):
+        return [images]
+    return list(images)
+
+
+def _sniff_mime(data):
+    """Image MIME type from magic bytes (PNG/JPEG/GIF/WebP; PNG default)."""
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "image/png"
+    if data[:3] == b"\xff\xd8\xff":
+        return "image/jpeg"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "image/gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "image/webp"
+    return "image/png"
+
+
+def load_image(image):
+    """Load one image into (bytes, mime_type). Accepts a local file path,
+    an http(s) URL, or raw image bytes."""
+    if isinstance(image, bytes):
+        data = image
+    elif isinstance(image, (str, os.PathLike)):
+        s = os.fspath(image)
+        if s.startswith(("http://", "https://")):
+            from urllib.request import urlopen
+            with urlopen(s) as r:
+                data = r.read()
+        else:
+            with open(s, "rb") as f:
+                data = f.read()
+    else:
+        raise TypeError(
+            f"unsupported image type {type(image).__name__}: expected a "
+            "file path, an http(s) URL, or raw bytes")
+    return data, _sniff_mime(data)
+
+
 def resolve_model(client, model=DEFAULT_MODEL):
     """The model name to send to `client`. For an OpenAI-compatible client
     still pointed at the Gemini default, ask the server what it serves (a
@@ -151,13 +202,23 @@ def resolve_model(client, model=DEFAULT_MODEL):
     return served
 
 
-def call_openai(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
+def call_openai(client, prompt, model=DEFAULT_MODEL, top_logprobs=20,
+                images=None):
     """Call an OpenAI-compatible verifier with logprobs.
     Returns (text, tokens, position_logprobs) — the same shape as
     `call_gemini`, so `extract_score` works unchanged."""
+    content = prompt
+    imgs = as_image_list(images)
+    if imgs:
+        content = [{"type": "text", "text": prompt}]
+        for img in imgs:
+            data, mime = load_image(img)
+            b64 = base64.b64encode(data).decode("ascii")
+            content.append({"type": "image_url",
+                            "image_url": {"url": f"data:{mime};base64,{b64}"}})
     params = dict(
         model=resolve_model(client, model),
-        messages=[{"role": "user", "content": prompt}],
+        messages=[{"role": "user", "content": content}],
         max_tokens=4096,
         temperature=1.0,
         logprobs=True,
@@ -216,7 +277,11 @@ def _score_tags_by_prefill(client, model, messages, text, tags,
     position_logprobs = []
     for tag in tags:
         prefix = (text or "") + f"\n{tag}"
+        # Some models (e.g. Qwen VL) put nearly all their mass on the
+        # letter WITH a leading space after the prefilled ">"; allow both
+        # spellings so the grammar mask keeps the real distribution.
         letters = [chr(65 + i) for i in range(GRANULARITY)]
+        letters += [" " + c for c in letters]
         try:
             # Constrain the prefilled position to the 20 score letters, so
             # the returned top-logprobs are the renormalized distribution
@@ -249,15 +314,17 @@ def _score_tags_by_prefill(client, model, messages, text, tags,
     return text, tokens or None, position_logprobs or None
 
 
-def call_verifier(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
+def call_verifier(client, prompt, model=DEFAULT_MODEL, top_logprobs=20,
+                  images=None):
     """Backend dispatch: route to the OpenAI-compatible or Gemini call based
     on the client type. Returns (text, tokens, position_logprobs)."""
     if _is_openai_client(client):
-        return call_openai(client, prompt, model, top_logprobs)
-    return call_gemini(client, prompt, model, top_logprobs)
+        return call_openai(client, prompt, model, top_logprobs, images=images)
+    return call_gemini(client, prompt, model, top_logprobs, images=images)
 
 
-def call_gemini(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
+def call_gemini(client, prompt, model=DEFAULT_MODEL, top_logprobs=20,
+                images=None):
     """Call the verifier model with logprobs.
     Returns (text, tokens, position_logprobs)."""
     from google.genai.types import (
@@ -271,9 +338,14 @@ def call_gemini(client, prompt, model=DEFAULT_MODEL, top_logprobs=20):
         thinking_config=ThinkingConfig(thinking_budget=0),
     )
 
+    parts = [Part(text=prompt)]
+    for img in as_image_list(images):
+        data, mime = load_image(img)
+        parts.append(Part.from_bytes(data=data, mime_type=mime))
+
     response = client.models.generate_content(
         model=model,
-        contents=[Content(role="user", parts=[Part(text=prompt)])],
+        contents=[Content(role="user", parts=parts)],
         config=config,
     )
 
@@ -357,8 +429,13 @@ def extract_score(text, tokens, position_logprobs, tag):
 # Pairwise prompt + single-criterion scoring
 # ---------------------------------------------------------------------------
 
-def build_prompt(problem, trace_a, trace_b, criterion, ground_truth_note):
+def build_prompt(problem, trace_a, trace_b, criterion, ground_truth_note,
+                 n_images=0):
     """One pairwise prompt focused on a single evaluation criterion."""
+    images_note = (
+        f"**Attached images:** {n_images} image(s) are attached to this "
+        "message, in order; they are part of the task context.\n\n"
+        if n_images else "")
     return (
         "You are an expert evaluator of AI coding agents. "
         "You will see a task description and two agent trajectories. "
@@ -366,6 +443,7 @@ def build_prompt(problem, trace_a, trace_b, criterion, ground_truth_note):
         f"**{criterion['name']}**.\n\n"
         f"{ground_truth_note}\n\n"
         f"**Task:**\n{problem}\n\n"
+        f"{images_note}"
         f"**Trajectory A:**\n{trace_a}\n\n"
         f"**Trajectory B:**\n{trace_b}\n\n"
         f"**Evaluation Guideline — {criterion['name']}:**\n"
@@ -382,12 +460,16 @@ def build_prompt(problem, trace_a, trace_b, criterion, ground_truth_note):
 
 
 def score_pair_criterion(client, problem, trace_a, trace_b, criterion,
-                         ground_truth_note, model=DEFAULT_MODEL):
+                         ground_truth_note, model=DEFAULT_MODEL, images=None):
     """Score (A, B) for a single criterion, returning fine-grained
-    rewards (R_A, R_B) in [0, 1]."""
+    rewards (R_A, R_B) in [0, 1]. `images` (one image or a list) is attached
+    to the verifier message as task context."""
+    imgs = as_image_list(images)
     prompt = build_prompt(
-        problem, trace_a, trace_b, criterion, ground_truth_note)
-    text, tokens, position_logprobs = call_verifier(client, prompt, model)
+        problem, trace_a, trace_b, criterion, ground_truth_note,
+        n_images=len(imgs))
+    text, tokens, position_logprobs = call_verifier(client, prompt, model,
+                                                    images=imgs)
     ra = extract_score(text, tokens, position_logprobs, "<score_A>")
     rb = extract_score(text, tokens, position_logprobs, "<score_B>")
     return ra, rb
@@ -488,7 +570,7 @@ def score_directed_pairs(lazy_client, tasks, needed_pairs, criteria,
                     if key not in cached:
                         jobs.append((key, trials[a]["problem"],
                                      trials[a]["trace"], trials[b]["trace"],
-                                     crit))
+                                     crit, trials[a].get("images")))
 
     log = print if progress else (lambda *a, **kw: None)
 
@@ -507,8 +589,8 @@ def score_directed_pairs(lazy_client, tasks, needed_pairs, criteria,
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = {
             executor.submit(score_pair_criterion, client, prob, ta, tb, crit,
-                            ground_truth_note, model): key
-            for key, prob, ta, tb, crit in jobs
+                            ground_truth_note, model, images): key
+            for key, prob, ta, tb, crit, images in jobs
         }
         iterator, set_postfix = _progress_iter(futures, progress)
         save_every = max(1, len(futures) // 20)

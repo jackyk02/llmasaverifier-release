@@ -14,6 +14,7 @@ print(r_a, r_b)   # fine-grained rewards in [0, 1]
 ```
 
 The verifier sees `trace_a` in slot A and `trace_b` in slot B; the returned rewards are averaged over all criteria and `n_evaluations` repeats.
+To score against visual evidence, attach image(s) with `images=` — see [Multimodal Verification with Images](../multimodal/image_inputs.md).
 
 ## Arguments
 
@@ -21,6 +22,7 @@ The verifier sees `trace_a` in slot A and `trace_b` in slot B; the returned rewa
 r_a, r_b = llm_verifier.compare(
     problem, trace_a, trace_b,
     criteria="swe_bench",        # same forms as select()
+    images=None,                 # task-context image(s): a path, URL, or bytes — or a list
     ground_truth_note=None,      # optional note the verifier always sees
     n_evaluations=1,           # repeats K, averaged
     max_workers=8,               # concurrency for the K x C scoring calls

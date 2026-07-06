@@ -105,6 +105,7 @@ result = llm_verifier.track(problem=problem, steps=steps,
                             checkpoint_steps=[1, 2, 3, 4, 5], n_evaluations=4)
 print(result.scores)  # progress after each step: [0.00106, 0.02417, 0.03143, 0.62004, 0.99978]
 ```
+
 ---
 
 ## Test-Time Scaling for Agentic Benchmarks
@@ -223,6 +224,29 @@ harness would see it:
 ```bash
 python terminal_bench_progress.py --online
 ```
+
+---
+
+## Multi-Modal Support
+
+With a multimodal verifier model (e.g. Gemini 2.5 Flash or
+`vllm serve Qwen/Qwen3.5-9B`), every
+entry point accepts `images` — a single image (`images="frame.png"`) or a
+list of images, each a local file path, an http(s) URL, or raw bytes:
+
+```python
+result = llm_verifier.select(problem, candidates, criteria=criteria,
+                             images=["before.png", "after.png"])
+
+tracker = llm_verifier.ProgressTracker(problem)
+score = tracker.update(step, images="camera_frame.png")  # per-step frame
+```
+
+Per-step frames stay part of the trajectory for all later updates, so the
+verifier always sees the full visual history — e.g. camera frames while
+tracking a robot rollout. See the
+[multimodal documentation](docs/multimodal/image_inputs.md) for accepted
+input forms, backend notes, and verified examples.
 
 ---
 

@@ -166,6 +166,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/progress_tracking.html">Progress Tracking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/criteria.html">Writing Verifier Criteria</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Multimodal</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../multimodal/image_inputs.html">Multimodal Verification with Images</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../advanced_features/fine_grained_reward.html">Fine-Grained Reward Estimation</a></li>
@@ -431,6 +435,7 @@
     <span class="n">candidates</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">criteria</span><span class="p">:</span> <span class="n">CriteriaArg</span><span class="p">,</span>
+    <span class="n">images</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ImagesArg</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ground_truth_note</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">n_evaluations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
     <span class="n">pivots</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">2</span><span class="p">,</span>
@@ -452,6 +457,7 @@ Identical inputs with the same <code class="docutils literal notranslate"><span 
 <li><p><code class="docutils literal notranslate"><span class="pre">problem</span></code>: the task description shown to the verifier.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">candidates</span></code>: list of N agent trajectories (strings) to rank.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">criteria</span></code>: a bundled benchmark name (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;swe_bench&quot;</span></code>), a path to a <code class="docutils literal notranslate"><span class="pre">*.md</span></code> criteria file, a <code class="docutils literal notranslate"><span class="pre">{name:</span> <span class="pre">description}</span></code> dict, or a list of strings / <code class="docutils literal notranslate"><span class="pre">{&quot;id&quot;,</span> <span class="pre">&quot;name&quot;,</span> <span class="pre">&quot;description&quot;}</span></code> dicts.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">images</span></code>: task-context image(s) the verifier sees with every comparison — a single image or a list, each a local file path (<code class="docutils literal notranslate"><span class="pre">images=&quot;frame.png&quot;</span></code>), an http(s) URL, or raw bytes. Requires a multimodal verifier model (Gemini, or a vision model behind the OpenAI-compatible server).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">ground_truth_note</span></code>: optional note the verifier always sees; defaults to the note parsed from the prompt file (or empty).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code>: repeated verifications K per criterion.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">pivots</span></code>: number of pivots k in the tournament. Keep k small relative to <code class="docutils literal notranslate"><span class="pre">len(candidates)</span></code> — cost grows as O(Nk²), and k ≥ N degenerates to a full round-robin (k is clamped to N).</p></li>
@@ -474,6 +480,7 @@ Identical inputs with the same <code class="docutils literal notranslate"><span 
     <span class="n">trace_b</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="o">*</span><span class="p">,</span>
     <span class="n">criteria</span><span class="p">:</span> <span class="n">CriteriaArg</span><span class="p">,</span>
+    <span class="n">images</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ImagesArg</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">ground_truth_note</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">n_evaluations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
@@ -484,6 +491,7 @@ Identical inputs with the same <code class="docutils literal notranslate"><span 
 </div>
 <p>Fine-grained rewards <code class="docutils literal notranslate"><span class="pre">(R_A,</span> <span class="pre">R_B)</span></code> in [0, 1] for one directed comparison.
 The verifier sees <code class="docutils literal notranslate"><span class="pre">trace_a</span></code> in slot A and <code class="docutils literal notranslate"><span class="pre">trace_b</span></code> in slot B; rewards are averaged over all criteria and <code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code> repeats.
+<code class="docutils literal notranslate"><span class="pre">images</span></code> accepts the same forms as <code class="docutils literal notranslate"><span class="pre">select</span></code>’s (one image or a list — paths, URLs, or bytes) and is attached as task context.
 This is the raw pairwise reward <code class="docutils literal notranslate"><span class="pre">select</span></code> is built on — note the single directed call does not cancel slot bias the way <code class="docutils literal notranslate"><span class="pre">select</span></code>’s ring pass does.
 A failed verifier call raises (there is no tie fallback here).</p>
 </section>
@@ -493,6 +501,7 @@ A failed verifier call raises (there is no tie fallback here).</p>
     <span class="n">problem</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
     <span class="n">steps</span><span class="p">:</span> <span class="n">Sequence</span><span class="p">[</span><span class="nb">str</span><span class="p">],</span>
     <span class="o">*</span><span class="p">,</span>
+    <span class="n">images</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ImagesArg</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">checkpoint_steps</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Sequence</span><span class="p">[</span><span class="nb">int</span><span class="p">]]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
     <span class="n">n_evaluations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
     <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
@@ -507,6 +516,7 @@ One verifier call scores every checkpoint (repeated <code class="docutils litera
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">problem</span></code>: the task instruction shown to the verifier.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">steps</span></code>: the agent’s steps, one string per step (action + observed output). Truncate very long observations yourself if needed.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">images</span></code>: task-context image(s) attached to every scoring call — a single image or a list (paths, URLs, or bytes). For per-step frames, use <code class="docutils literal notranslate"><span class="pre">ProgressTracker</span></code> and pass images to each <code class="docutils literal notranslate"><span class="pre">update</span></code>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">checkpoint_steps</span></code>: 1-indexed step numbers to score. Defaults to the interior steps <code class="docutils literal notranslate"><span class="pre">2</span> <span class="pre">..</span> <span class="pre">T-1</span></code> (the first and last step anchor the scale), or every step for trajectories with fewer than 3 steps.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code>: independent repeats K; the returned curve is their mean.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">max_workers</span></code>: concurrency for the K repeats.</p></li>
@@ -520,6 +530,7 @@ One verifier call scores every checkpoint (repeated <code class="docutils litera
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">problem</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
         <span class="o">*</span><span class="p">,</span>
+        <span class="n">images</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">ImagesArg</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span>
         <span class="n">n_evaluations</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">1</span><span class="p">,</span>
         <span class="n">max_workers</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">8</span><span class="p">,</span>
         <span class="n">model</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="n">DEFAULT_MODEL</span><span class="p">,</span>
@@ -531,9 +542,10 @@ One verifier call scores every checkpoint (repeated <code class="docutils litera
 Feed steps as the agent produces them; each <code class="docutils literal notranslate"><span class="pre">update</span></code> scores the trajectory prefix accumulated so far, so the verifier structurally cannot be influenced by future steps.
 Cost: one verifier call per repeat per update — a T-step run costs <code class="docutils literal notranslate"><span class="pre">T</span> <span class="pre">×</span> <span class="pre">n_evaluations</span></code> calls, versus <code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code> for offline <code class="docutils literal notranslate"><span class="pre">track</span></code>.
 Raises <code class="docutils literal notranslate"><span class="pre">MissingAPIKeyError</span></code> at construction if no credentials are found and no <code class="docutils literal notranslate"><span class="pre">client</span></code> is given.</p>
+<p>Pass <code class="docutils literal notranslate"><span class="pre">images</span></code> at construction for task-context image(s) — e.g. a goal image or reference screenshot.</p>
 <p><strong>Methods and attributes</strong></p>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">update(step:</span> <span class="pre">str)</span> <span class="pre">-&gt;</span> <span class="pre">float</span></code>: append the agent’s latest step and return the progress score of the trajectory so far (mean over <code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code> repeats).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">update(step:</span> <span class="pre">str,</span> <span class="pre">images=None)</span> <span class="pre">-&gt;</span> <span class="pre">float</span></code>: append the agent’s latest step and return the progress score of the trajectory so far (mean over <code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code> repeats). <code class="docutils literal notranslate"><span class="pre">images</span></code> (one image or a list — e.g. a camera frame after this step) is attached to this step: the step text gets an <code class="docutils literal notranslate"><span class="pre">[Image</span> <span class="pre">i</span> <span class="pre">attached]</span></code> marker and the image stays part of the trajectory for all later updates.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">result()</span> <span class="pre">-&gt;</span> <span class="pre">ProgressResult</span></code>: the curve so far, same shape as <code class="docutils literal notranslate"><span class="pre">track()</span></code>’s.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">steps</span></code> / <code class="docutils literal notranslate"><span class="pre">scores</span></code>: the checkpoint indices and scores accumulated so far.</p></li>
 </ul>
@@ -571,6 +583,7 @@ Raises <code class="docutils literal notranslate"><span class="pre">MissingAPIKe
 <section id="constants-and-helpers">
 <h2>Constants and helpers<a class="headerlink" href="#constants-and-helpers" title="Link to this heading">#</a></h2>
 <ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ImagesArg</span></code> — the type of every <code class="docutils literal notranslate"><span class="pre">images</span></code> argument: one image or a sequence of images, where each image is a local file path, an http(s) URL, or raw image bytes. Images are attached to the verifier message after the text prompt, in order; the verifier model must be multimodal. See <a class="reference internal" href="../multimodal/image_inputs.html"><span class="std std-doc">Multimodal Verification with Images</span></a>.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">DEFAULT_MODEL</span> <span class="pre">=</span> <span class="pre">&quot;gemini-2.5-flash&quot;</span></code> — the default verifier model.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">GRANULARITY</span> <span class="pre">=</span> <span class="pre">20</span></code> — the number of score tokens G (the letter scale A–T).</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">load_dotenv(root_dir=None)</span></code> — load <code class="docutils literal notranslate"><span class="pre">VERTEX_API_KEY</span></code> / <code class="docutils literal notranslate"><span class="pre">OPENAI_BASE_URL</span></code> (and friends) from a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file.</p></li>

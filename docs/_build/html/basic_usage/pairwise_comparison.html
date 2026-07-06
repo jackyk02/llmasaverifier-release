@@ -168,6 +168,10 @@
 <li class="toctree-l1"><a class="reference internal" href="progress_tracking.html">Progress Tracking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="criteria.html">Writing Verifier Criteria</a></li>
 </ul>
+<p aria-level="2" class="caption" role="heading"><span class="caption-text">Multimodal</span></p>
+<ul class="nav bd-sidenav">
+<li class="toctree-l1"><a class="reference internal" href="../multimodal/image_inputs.html">Multimodal Verification with Images</a></li>
+</ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
 <ul class="nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="../advanced_features/fine_grained_reward.html">Fine-Grained Reward Estimation</a></li>
@@ -424,12 +428,14 @@ For the raw fine-grained rewards of a single comparison, call <code class="docut
 <span class="nb">print</span><span class="p">(</span><span class="n">r_a</span><span class="p">,</span> <span class="n">r_b</span><span class="p">)</span>   <span class="c1"># fine-grained rewards in [0, 1]</span>
 </pre></div>
 </div>
-<p>The verifier sees <code class="docutils literal notranslate"><span class="pre">trace_a</span></code> in slot A and <code class="docutils literal notranslate"><span class="pre">trace_b</span></code> in slot B; the returned rewards are averaged over all criteria and <code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code> repeats.</p>
+<p>The verifier sees <code class="docutils literal notranslate"><span class="pre">trace_a</span></code> in slot A and <code class="docutils literal notranslate"><span class="pre">trace_b</span></code> in slot B; the returned rewards are averaged over all criteria and <code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code> repeats.
+To score against visual evidence, attach image(s) with <code class="docutils literal notranslate"><span class="pre">images=</span></code> — see <a class="reference internal" href="../multimodal/image_inputs.html"><span class="std std-doc">Multimodal Verification with Images</span></a>.</p>
 <section id="arguments">
 <h2>Arguments<a class="headerlink" href="#arguments" title="Link to this heading">#</a></h2>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">r_a</span><span class="p">,</span> <span class="n">r_b</span> <span class="o">=</span> <span class="n">llm_verifier</span><span class="o">.</span><span class="n">compare</span><span class="p">(</span>
     <span class="n">problem</span><span class="p">,</span> <span class="n">trace_a</span><span class="p">,</span> <span class="n">trace_b</span><span class="p">,</span>
     <span class="n">criteria</span><span class="o">=</span><span class="s2">&quot;swe_bench&quot;</span><span class="p">,</span>        <span class="c1"># same forms as select()</span>
+    <span class="n">images</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>                 <span class="c1"># task-context image(s): a path, URL, or bytes — or a list</span>
     <span class="n">ground_truth_note</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>      <span class="c1"># optional note the verifier always sees</span>
     <span class="n">n_evaluations</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>           <span class="c1"># repeats K, averaged</span>
     <span class="n">max_workers</span><span class="o">=</span><span class="mi">8</span><span class="p">,</span>               <span class="c1"># concurrency for the K x C scoring calls</span>

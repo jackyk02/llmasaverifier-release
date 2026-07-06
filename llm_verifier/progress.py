@@ -34,6 +34,7 @@ from typing import Any, List, Optional, Sequence, Tuple
 
 from llm_verifier.fine_grained_reward import (
     DEFAULT_MODEL,
+    as_image_list,
     call_verifier,
     create_client,
 )
@@ -86,7 +87,8 @@ def format_steps(steps: Sequence[str]) -> str:
 
 
 def build_progress_prompt(problem: str, trajectory_text: str, n_steps: int,
-                          checkpoint_steps: Sequence[int]) -> str:
+                          checkpoint_steps: Sequence[int],
+                          n_images: int = 0) -> str:
     """Neutral progress-scoring prompt. It never reveals whether the
     trajectory eventually succeeded — successes and failures see the same
     template."""
@@ -101,6 +103,16 @@ def build_progress_prompt(problem: str, trajectory_text: str, n_steps: int,
         "**Task instruction:**",
         problem.strip(),
         "",
+    ]
+    if n_images:
+        out += [
+            f"**Attached images:** {n_images} image(s) are attached to this "
+            "message, in order. Markers like \"[Image i attached]\" in the "
+            "trajectory refer to them; images without a marker are task "
+            "context.",
+            "",
+        ]
+    out += [
         f"**Agent trajectory ({n_steps} agent steps; each step is one "
         "action by the agent, with its observed output):**",
         trajectory_text,
@@ -235,6 +247,7 @@ def track(
     problem: str,
     steps: Sequence[str],
     *,
+    images: Any = None,
     checkpoint_steps: Optional[Sequence[int]] = None,
     n_evaluations: int = 1,
     max_workers: int = 8,
@@ -251,6 +264,11 @@ def track(
         problem: the task instruction shown to the verifier.
         steps: the agent's steps, one string per step (action + observed
             output). Truncate very long observations yourself if needed.
+        images: task-context image(s) the verifier sees with every scoring
+            call — a single image or a list, each a local file path
+            (``images="goal.png"``), an http(s) URL, or raw bytes. Requires
+            a multimodal verifier model. For per-step frames, use
+            `ProgressTracker` and pass images to each ``update``.
         checkpoint_steps: 1-indexed step numbers to score. Defaults to the
             interior steps ``2 .. T-1`` (the first and last step anchor the
             scale), or every step for trajectories with fewer than 3 steps.
@@ -282,12 +300,15 @@ def track(
     if client is None:
         client = create_client()
 
+    imgs = as_image_list(images)
     n = len(checkpoint_steps)
     prompt = build_progress_prompt(
-        problem, format_steps(steps), t, checkpoint_steps)
+        problem, format_steps(steps), t, checkpoint_steps,
+        n_images=len(imgs))
 
     def one_rep(_):
-        text, tokens, position_logprobs = call_verifier(client, prompt, model)
+        text, tokens, position_logprobs = call_verifier(client, prompt, model,
+                                                        images=imgs)
         return extract_progress_scores(text, tokens, position_logprobs, n)
 
     if n_evaluations == 1:
@@ -316,6 +337,11 @@ class ProgressTracker:
     Cost: one verifier call per repeat per update — a T-step run costs
     T x n_evaluations calls, versus n_evaluations for offline `track`.
 
+    Pass `images` at construction for task-context image(s) (a goal image,
+    a reference screenshot), and/or per step via `update(step, images=...)`
+    (e.g. a camera frame after each action); both accept a single path /
+    URL / bytes or a list.
+
     Example:
         tracker = llm_verifier.ProgressTracker(problem, n_evaluations=4)
         for step in agent_steps():
@@ -332,6 +358,7 @@ class ProgressTracker:
         self,
         problem: str,
         *,
+        images: Any = None,
         n_evaluations: int = 1,
         max_workers: int = 8,
         model: str = DEFAULT_MODEL,
@@ -348,17 +375,36 @@ class ProgressTracker:
         self.scores: List[float] = []
         self._step_texts: List[str] = []
         self._per_step_reps: List[List[Optional[float]]] = []
+        # Task-context images plus any per-step images fed via `update`,
+        # attached to every scoring call in order.
+        self._images: List[Any] = as_image_list(images)
 
-    def update(self, step: str) -> float:
+    def update(self, step: str, images: Any = None) -> float:
         """Append the agent's latest step and return the progress score of
-        the trajectory so far (mean over `n_evaluations` repeats)."""
-        self._step_texts.append(str(step))
+        the trajectory so far (mean over `n_evaluations` repeats).
+
+        `images` (one image or a list — file paths, http(s) URLs, or raw
+        bytes, e.g. a camera frame after this step) is attached to this
+        step: the step text gets an ``[Image i attached]`` marker and the
+        image stays part of the trajectory for all later updates. Requires
+        a multimodal verifier model."""
+        step = str(step)
+        step_imgs = as_image_list(images)
+        if step_imgs:
+            markers = " ".join(
+                f"[Image {len(self._images) + j + 1} attached]"
+                for j in range(len(step_imgs)))
+            step = f"{step}\n{markers}"
+            self._images.extend(step_imgs)
+        self._step_texts.append(step)
         k = len(self._step_texts)
         prompt = build_progress_prompt(
-            self.problem, format_steps(self._step_texts), k, [k])
+            self.problem, format_steps(self._step_texts), k, [k],
+            n_images=len(self._images))
 
         def one_rep(_):
-            text, tokens, lps = call_verifier(self.client, prompt, self.model)
+            text, tokens, lps = call_verifier(self.client, prompt, self.model,
+                                              images=self._images)
             return extract_progress_scores(text, tokens, lps, 1)[0]
 
         if self.n_evaluations == 1:

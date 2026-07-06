@@ -40,6 +40,7 @@ Under the hood, `select` runs the [Probabilistic Pivot Tournament](../advanced_f
 ## Key arguments
 
 - `criteria`: a bundled benchmark name (e.g. `"swe_bench"`), a path to a `*.md` criteria file, a `{name: description}` dict, or a list of strings. See [Writing Verifier Criteria](criteria.md).
+- `images`: attach image(s) as task context (`images="frame.png"` or a list) — see [Multimodal Verification with Images](../multimodal/image_inputs.md).
 - `n_evaluations`: repeated verifications `K` per criterion. Averaging `K` independent evaluations reduces per-pass noise; accuracy grows with `K`.
 - `pivots`: the number of pivots `k` in the tournament. Keep `k` small relative to `N` — cost grows as `O(Nk²)`, and `k ≥ N` degenerates to a full round-robin.
 - `seed`: identical inputs with the same seed run the identical tournament.

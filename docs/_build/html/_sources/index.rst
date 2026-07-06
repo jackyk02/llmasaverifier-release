@@ -23,6 +23,7 @@ Its core features include:
 - **Fine-Grained Rewards**: Computes continuous rewards in [0, 1] as the expectation over the verifier's scoring-token logits, capturing evaluation uncertainty and eliminating the tie rates that plague discrete LLM-as-a-Judge scoring.
 - **Cost-Efficient Best-of-N Selection**: The Probabilistic Pivot Tournament (PPT) ranks N candidate trajectories with O(Nk²) pairwise verifications instead of a full O(N²) round-robin, concentrating the budget on uncertain top candidates.
 - **Progress Tracking**: The same fine-grained reward scores a trajectory at every step — offline over a finished run or online while the agent is still executing — enabling early stopping of hopeless rollouts and safe agent deployment.
+- **Multimodal Inputs**: Every API accepts images — file paths, URLs, or raw bytes; one or many — so the verifier scores screenshots, rendered plots, and per-step camera frames instead of the agent's narration, on both the Gemini and OpenAI-compatible backends.
 - **State-of-the-Art Results**: Achieves SOTA test-time scaling performance on Terminal-Bench V2 (86.5%), SWE-Bench Verified (78.2%), RoboRewardBench (87.4%), and MedAgentBench (73.3%).
 - **RL-Ready Dense Rewards**: Serves as a drop-in dense reward for reinforcement learning, improving sample efficiency by ≈1.8× for SAC on LIBERO and ≈1.1× for GRPO on MATH.
 - **Simple, Extensible API**: ``llm_verifier.select``, ``compare``, and ``track`` cover best-of-N selection, pairwise scoring, and progress curves in a few lines; new benchmarks plug into a typed registry with Markdown criteria files.
@@ -41,6 +42,12 @@ Its core features include:
    basic_usage/pairwise_comparison.md
    basic_usage/progress_tracking.md
    basic_usage/criteria.md
+
+.. toctree::
+   :maxdepth: 1
+   :caption: Multimodal
+
+   multimodal/image_inputs.md
 
 .. toctree::
    :maxdepth: 1

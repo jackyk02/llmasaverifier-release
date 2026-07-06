@@ -335,99 +335,42 @@ This lives in `llm_verifier/pivot_tournament.py`.
 
 ### Pairwise Comparison Prompt
 
-One verifier call per (criterion, repeat) — built by `build_prompt` in
-`llm_verifier/fine_grained_reward.py`:
-
 ```text
-You are an expert evaluator of AI coding agents. You will see a task
-description and two agent trajectories. Your job is to evaluate them on ONE
-specific criterion: **{criterion name}**.
+You are an expert [domain] reviewer. You will see a task description and two
+trajectories.
 
-{ground truth note}
+Evaluation Criteria: [domain specific criteria]
 
-**Task:**
-{task prompt}
+Task: {task prompt}
+Trajectory A: {A}
+Trajectory B: {B}
 
-**Trajectory A:**
-{A}
+Carefully analyze each trajectory, then provide your final scores:
+<score_A> INTEGER_1_TO_20 </score_A>
+<score_B> INTEGER_1_TO_20 </score_B>
 
-**Trajectory B:**
-{B}
-
-**Evaluation Guideline — {criterion name}:**
-{criterion description}
-
-Score each trajectory ONLY on this specific criterion. Ignore other aspects
-of the trajectory that are not relevant to "{criterion name}".
-
-**Rating Scale:**
-Rate how likely the agent correctly solved the task on a 20-point scale
-using letters A through T:
-  A = clearly and completely succeeded with verified output (best)
-  B-D = succeeded with only minor issues
-  E-G = above average, mostly correct with some issues
-  H-J = uncertain, leans toward success
-  K-M = uncertain, leans toward failure
-  N-P = below average, significant issues remain
-  Q-S = failed with some partial progress
-  T = clearly and completely failed (worst)
-
-Then output your final scores:
-<score_A>LETTER_A_TO_T</score_A>
-<score_B>LETTER_A_TO_T</score_B>
-
-Begin your analysis now.
+Rating Rules: Rate correctness on a 1-20 scale based on evaluation criteria
+(1 = incorrect, 10 = borderline, 20 = correct)
 ```
 
 ### Progress Tracking Prompt
 
-Built by `build_progress_prompt` in `llm_verifier/progress.py` (abridged —
-the calibration rules and expected-pattern guidance are elided here; see
-[the progress-tracking docs](docs/basic_usage/progress_tracking.md) for the
-full template):
-
 ```text
-You are a strict, skeptical evaluator of agent task attempts. Agents
-routinely declare victory while their environment still shows errors, edit
-the wrong target, or never actually run the verification the task asks for.
-Trust observed output — NOT the agent's narration.
+You are an evaluator of [domain] agent attempts. Trust observed output — NOT the agent's narration.
 
-**Task instruction:**
-{task prompt}
+Task: {task prompt}
+Agent trajectory ({N} steps): {trajectory}
 
-**Agent trajectory ({T} agent steps; each step is one action by the agent,
-with its observed output):**
-{numbered agent steps}
+You will score the trajectory at {N} checkpoints. Given everything the agent has done up to and including this step, would the agent's CURRENT state already complete the task?
 
-You will score the trajectory at {N} CHECKPOINTS. The score measures exactly
-ONE thing:
-
-    "Given everything the agent has done up to and including this step,
-    would the agent's CURRENT state actually satisfy the task's hidden
-    grader (i.e. produce the expected files / output / behavior the task
-    requires)?"
-
-Use the 20-letter A..T scale:
-  A = certainly NO ... T = essentially certain YES
-
-[CRITICAL CALIBRATION RULES and EXPECTED PATTERNS — see full template]
-
-The N checkpoints to score are:
-  Checkpoint 1 = state right after Agent Step {k_1}
-  ...
-
-Score each checkpoint INDEPENDENTLY based on the agent's current best
-attempt at that point in the trajectory. Output EXACTLY N lines and nothing
-else, in the format:
-<c1>LETTER</c1>
+Score each checkpoint INDEPENDENTLY, then output exactly N lines:
+<c1> INTEGER_1_TO_20 </c1>
 ...
-<cN>LETTER</cN>
+<cN> INTEGER_1_TO_20 </cN>
 
-where each LETTER is a single letter from A to T.
+Rating Rules: Rate completion on a 1-20 scale (1 = certainly not complete,
+10 = uncertain, 20 = verified complete)
 ```
 
-> Note: a letter scale (A-T) is used instead of digits so each score level
-> is a single token, enabling logprob extraction for granularity scaling.
-> The two scales run in opposite directions: for pairwise scoring A is the
-> BEST score (A = 20 ... T = 1), while for progress tracking A means no
-> progress and T means complete (A = 0% ... T = 100%).
+> Note: we use a letter-based scale (A-T) instead of digits in the actual
+> implementation to enable logprob extraction for granularity scaling.

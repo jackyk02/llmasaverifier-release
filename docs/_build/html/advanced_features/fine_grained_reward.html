@@ -53,7 +53,7 @@
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Probabilistic Pivot Tournament" href="pivot_tournament.html" />
-    <link rel="prev" title="Multimodal Verification with Images" href="../multimodal/image_inputs.html" />
+    <link rel="prev" title="Writing Verifier Criteria" href="../basic_usage/criteria.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.0" />
@@ -167,10 +167,6 @@
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/pairwise_comparison.html">Pairwise Comparison</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/progress_tracking.html">Progress Tracking</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../basic_usage/criteria.html">Writing Verifier Criteria</a></li>
-</ul>
-<p aria-level="2" class="caption" role="heading"><span class="caption-text">Multimodal</span></p>
-<ul class="nav bd-sidenav">
-<li class="toctree-l1"><a class="reference internal" href="../multimodal/image_inputs.html">Multimodal Verification with Images</a></li>
 </ul>
 <p aria-level="2" class="caption" role="heading"><span class="caption-text">Advanced Features</span></p>
 <ul class="current nav bd-sidenav">
@@ -432,52 +428,26 @@ Coarse scoring leads to <strong>27% ties</strong> on Terminal-Bench V2.</p>
 </section>
 <section id="the-scoring-prompt">
 <h2>The scoring prompt<a class="headerlink" href="#the-scoring-prompt" title="Link to this heading">#</a></h2>
-<p>Given a task prompt <span class="math notranslate nohighlight">\(x\)</span>, a language model <span class="math notranslate nohighlight">\(p_\theta\)</span>, a criterion <span class="math notranslate nohighlight">\(c\)</span>, and two candidate trajectories <span class="math notranslate nohighlight">\(\tau_i\)</span> and <span class="math notranslate nohighlight">\(\tau_j\)</span>, we construct scoring prompts and obtain the conditional distributions <span class="math notranslate nohighlight">\(p_{\theta}(v \mid x,c,\tau_i)\)</span> and <span class="math notranslate nohighlight">\(p_{\theta}(v \mid x,c,\tau_j)\)</span> by extracting the logprobs from the <code class="docutils literal notranslate"><span class="pre">&lt;score_A&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;score_B&gt;</span></code> tags.
-The prompt is built per criterion — one verifier call per (criterion, repeat) — by <code class="docutils literal notranslate"><span class="pre">build_prompt</span></code> in <code class="docutils literal notranslate"><span class="pre">llm_verifier/fine_grained_reward.py</span></code>:</p>
-<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>You are an expert evaluator of AI coding agents. You will see a task
-description and two agent trajectories. Your job is to evaluate them on ONE
-specific criterion: **{criterion name}**.
+<p>Given a task prompt <span class="math notranslate nohighlight">\(x\)</span>, a language model <span class="math notranslate nohighlight">\(p_\theta\)</span>, a criterion <span class="math notranslate nohighlight">\(c\)</span>, and two candidate trajectories <span class="math notranslate nohighlight">\(\tau_i\)</span> and <span class="math notranslate nohighlight">\(\tau_j\)</span>, we construct scoring prompts and obtain the conditional distributions <span class="math notranslate nohighlight">\(p_{\theta}(v \mid x,c,\tau_i)\)</span> and <span class="math notranslate nohighlight">\(p_{\theta}(v \mid x,c,\tau_j)\)</span> by extracting the logprobs from the <code class="docutils literal notranslate"><span class="pre">&lt;score_A&gt;</span></code> and <code class="docutils literal notranslate"><span class="pre">&lt;score_B&gt;</span></code> tags:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>You are an expert [domain] reviewer. You will see a task description and two trajectories.
 
-{ground truth note}
+Evaluation Criteria: [domain specific criteria]
 
-**Task:**
-{task prompt}
+Task: {task prompt}
+Trajectory A: {A}   Trajectory B: {B}
 
-**Trajectory A:**
-{A}
+Carefully analyze each trajectory, then provide your final scores:
 
-**Trajectory B:**
-{B}
+&lt;score_A&gt; INTEGER_1_TO_20 &lt;/score_A&gt;
+&lt;score_B&gt; INTEGER_1_TO_20 &lt;/score_B&gt;
 
-**Evaluation Guideline — {criterion name}:**
-{criterion description}
-
-Score each trajectory ONLY on this specific criterion. Ignore other aspects
-of the trajectory that are not relevant to &quot;{criterion name}&quot;.
-
-**Rating Scale:**
-Rate how likely the agent correctly solved the task on a 20-point scale
-using letters A through T:
-  A = clearly and completely succeeded with verified output (best)
-  B-D = succeeded with only minor issues
-  E-G = above average, mostly correct with some issues
-  H-J = uncertain, leans toward success
-  K-M = uncertain, leans toward failure
-  N-P = below average, significant issues remain
-  Q-S = failed with some partial progress
-  T = clearly and completely failed (worst)
-
-Then output your final scores:
-&lt;score_A&gt;LETTER_A_TO_T&lt;/score_A&gt;
-&lt;score_B&gt;LETTER_A_TO_T&lt;/score_B&gt;
-
-Begin your analysis now.
+Rating Rules: Rate correctness on a 1–20 scale based on evaluation criteria
+(1 = incorrect, 10 = borderline, 20 = correct)
 </pre></div>
 </div>
-<p>When <a class="reference internal" href="../multimodal/image_inputs.html"><span class="std std-doc">images are attached</span></a>, an <code class="docutils literal notranslate"><span class="pre">**Attached</span> <span class="pre">images:**</span> <span class="pre">N</span> <span class="pre">image(s)…</span></code> line follows the task section; text-only calls build exactly the prompt above.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>A letter scale (A–T) is used instead of digits so that each score level is a single token, enabling logprob extraction at any granularity. For this pairwise scale <strong>A is the best score and T the worst</strong> (A ↦ 20, T ↦ 1). The <a class="reference internal" href="../basic_usage/progress_tracking.html"><span class="std std-doc">progress-tracking scale</span></a> runs in the opposite direction (A = 0% progress, T = 100%).</p>
+<p>A letter-based scale (A–T) is used internally instead of digits so that each score level is a single token, enabling logprob extraction at any granularity.</p>
 </div>
 </section>
 <section id="the-reward">
@@ -529,12 +499,12 @@ Failed calls scored as ties (<code class="docutils literal notranslate"><span cl
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="../multimodal/image_inputs.html"
+       href="../basic_usage/criteria.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Multimodal Verification with Images</p>
+        <p class="prev-next-title">Writing Verifier Criteria</p>
       </div>
     </a>
     <a class="right-next"

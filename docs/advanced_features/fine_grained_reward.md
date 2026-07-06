@@ -14,27 +14,54 @@ Coarse scoring leads to **27% ties** on Terminal-Bench V2.
 
 ## The scoring prompt
 
-Given a task prompt $x$, a language model $p_\theta$, a criterion $c$, and two candidate trajectories $\tau_i$ and $\tau_j$, we construct scoring prompts and obtain the conditional distributions $p_{\theta}(v \mid x,c,\tau_i)$ and $p_{\theta}(v \mid x,c,\tau_j)$ by extracting the logprobs from the `<score_A>` and `<score_B>` tags:
+Given a task prompt $x$, a language model $p_\theta$, a criterion $c$, and two candidate trajectories $\tau_i$ and $\tau_j$, we construct scoring prompts and obtain the conditional distributions $p_{\theta}(v \mid x,c,\tau_i)$ and $p_{\theta}(v \mid x,c,\tau_j)$ by extracting the logprobs from the `<score_A>` and `<score_B>` tags.
+The prompt is built per criterion — one verifier call per (criterion, repeat) — by `build_prompt` in `llm_verifier/fine_grained_reward.py`:
 
 ```text
-You are an expert [domain] reviewer. You will see a task description and two trajectories.
+You are an expert evaluator of AI coding agents. You will see a task
+description and two agent trajectories. Your job is to evaluate them on ONE
+specific criterion: **{criterion name}**.
 
-Evaluation Criteria: [domain specific criteria]
+{ground truth note}
 
-Task: {task prompt}
-Trajectory A: {A}   Trajectory B: {B}
+**Task:**
+{task prompt}
 
-Carefully analyze each trajectory, then provide your final scores:
+**Trajectory A:**
+{A}
 
-<score_A> INTEGER_1_TO_20 </score_A>
-<score_B> INTEGER_1_TO_20 </score_B>
+**Trajectory B:**
+{B}
 
-Rating Rules: Rate correctness on a 1–20 scale based on evaluation criteria
-(1 = incorrect, 10 = borderline, 20 = correct)
+**Evaluation Guideline — {criterion name}:**
+{criterion description}
+
+Score each trajectory ONLY on this specific criterion. Ignore other aspects
+of the trajectory that are not relevant to "{criterion name}".
+
+**Rating Scale:**
+Rate how likely the agent correctly solved the task on a 20-point scale
+using letters A through T:
+  A = clearly and completely succeeded with verified output (best)
+  B-D = succeeded with only minor issues
+  E-G = above average, mostly correct with some issues
+  H-J = uncertain, leans toward success
+  K-M = uncertain, leans toward failure
+  N-P = below average, significant issues remain
+  Q-S = failed with some partial progress
+  T = clearly and completely failed (worst)
+
+Then output your final scores:
+<score_A>LETTER_A_TO_T</score_A>
+<score_B>LETTER_A_TO_T</score_B>
+
+Begin your analysis now.
 ```
 
+When [images are attached](../multimodal/image_inputs.md), an `**Attached images:** N image(s)…` line follows the task section; text-only calls build exactly the prompt above.
+
 ```{note}
-A letter-based scale (A–T) is used internally instead of digits so that each score level is a single token, enabling logprob extraction at any granularity.
+A letter scale (A–T) is used instead of digits so that each score level is a single token, enabling logprob extraction at any granularity. For this pairwise scale **A is the best score and T the worst** (A ↦ 20, T ↦ 1). The [progress-tracking scale](../basic_usage/progress_tracking.md) runs in the opposite direction (A = 0% progress, T = 100%).
 ```
 
 ## The reward

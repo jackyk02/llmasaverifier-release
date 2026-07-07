@@ -165,7 +165,7 @@ print("Ranking:", result.ranking)
 
 Under the hood, `select` runs the
 [Probabilistic Pivot Tournament](#probabilistic-pivot-tournament) to rank all
-`N` trajectories using `O(Nk²)` pairwise verifications instead of a full
+`N` trajectories using `O(Nk)` pairwise verifications instead of a full
 `O(N²)` round-robin. `pivots` trades cost for accuracy: more pivots = more
 comparisons = higher accuracy.
 
@@ -268,7 +268,7 @@ input forms, backend notes, and verified examples.
 │   ├── benchmarks.py            #   BENCHMARKS registry (one Benchmark / launch)
 │   ├── fine_grained_reward.py   #   R(x,τ): Gemini logprob scoring + cache
 │   ├── progress.py              #   llm_verifier.track(...): per-step progress curve
-│   ├── pivot_tournament.py      #   PPT: O(Nk²) selection (Bradley-Terry)
+│   ├── pivot_tournament.py      #   PPT: O(Nk) selection (Bradley-Terry)
 │   ├── prompts.py               #   load criteria/*.md + normalize criteria args
 │   └── loaders.py               #   per-benchmark trajectory loaders
 ├── data/                        # agent trajectories per benchmark
@@ -311,7 +311,7 @@ To pick the best of `N` candidate trajectories, a round-robin tournament scores
 all $\binom{N}{2}$ pairs — `O(N²)`. Probabilistic Pivot Tournament (PPT) is a
 cost efficient ranking algorithm in which every candidate is compared only
 against a small set of pivots, reducing the budget from $\mathcal{O}(N^2)$ to
-$\mathcal{O}(Nk^2)$.
+$\mathcal{O}(Nk)$.
 
 1. **Candidates:** the pool $\{\tau_1,\dots,\tau_N\}$ to be ranked.
 2. **Ring pass:** a random Hamiltonian cycle scores the $N$ adjacent pairs so
@@ -323,7 +323,7 @@ $\mathcal{O}(Nk^2)$.
    is scored via the pairwise preference
    $p(a \succ b) = \sigma(R_a - R_b)$, concentrating the budget on uncertain
    top candidates and cutting cost from $\mathcal{O}(N^2)$ to
-   $\mathcal{O}(Nk^2)$.
+   $\mathcal{O}(Nk)$.
 5. **Selection:** comparisons are aggregated into win mass $w_i$ and count
    $c_i$, and the candidate with the highest normalized $w_i/c_i$ is
    returned.

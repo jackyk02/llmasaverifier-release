@@ -1,8 +1,8 @@
 """
-Probabilistic Pivot Tournament (PPT): O(Nk²) best-of-N selection.
+Probabilistic Pivot Tournament (PPT): O(Nk) best-of-N selection.
 
 A round-robin tournament compares all C(N, 2) pairs of candidates — O(N^2)
-verifier calls per task. PPT reaches the same selection with O(Nk²)
+verifier calls per task. PPT reaches the same selection with O(Nk)
 comparisons (k = number of pivots, k << N) in three steps:
 
   1) Ring pass. Sample a uniformly random Hamiltonian cycle gamma over the N

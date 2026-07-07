@@ -3,7 +3,7 @@
 
 Runs `llm_verifier.track()` (K=16 repeats) on the two Terminus 2 runs of the
 Terminal-Bench 2 task `pytorch-model-cli` shipped in
-`data/tacking_examples/pytorch-model-cli/`, saves the curves JSON, and renders
+`data/progress_tracking/pytorch-model-cli/`, saves the curves JSON, and renders
 the figure (steps normalized to [0, 1], scores normalized by the global max of
 the two mean curves, ±1 std band over the repeats). Scoring makes real
 verifier calls — requires `VERTEX_API_KEY` in `.env`.
@@ -28,7 +28,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-TRAJ_DIR = os.path.join(ROOT_DIR, "data", "tacking_examples",
+TRAJ_DIR = os.path.join(ROOT_DIR, "data", "progress_tracking",
                         "pytorch-model-cli")
 TRIALS = {"succ": "success", "fail": "fail"}
 CURVES_JSON = os.path.join(ROOT_DIR, "cache",

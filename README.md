@@ -250,6 +250,33 @@ input forms, backend notes, and verified examples.
 
 ---
 
+## Claude Code Plugin
+
+[TurboAgent](https://github.com/llm-as-a-verifier/TurboAgent) brings
+LLM-as-a-Verifier to [Claude Code](https://claude.com/claude-code) as a drop-in
+LLM API proxy. It sits between your client and the model provider, generating
+multiple candidate responses in parallel and selecting the best one with a
+[Probabilistic Pivot Tournament](#probabilistic-pivot-tournament).
+
+```bash
+pip install git+https://github.com/llm-as-a-verifier/TurboAgent
+```
+
+Point Claude Code at the proxy and run as usual:
+
+```bash
+turbo-agent                                        # starts on port 8888
+ANTHROPIC_BASE_URL=http://localhost:8888 claude
+```
+
+It ships a built-in visualizer at
+`http://localhost:8888/visualizer` that shows the pipeline DAG, progress scores, candidate
+responses, and the final selection. See the
+[TurboAgent repository](https://github.com/llm-as-a-verifier/TurboAgent) for
+configuration and setup details.
+
+---
+
 ## Directory Structure
 
 ```

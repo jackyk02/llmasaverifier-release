@@ -245,7 +245,7 @@ score = tracker.update(step, images="camera_frame.png")  # per-step frame
 Per-step frames stay part of the trajectory for all later updates, so the
 verifier always sees the full visual history — e.g. camera frames while
 tracking a robot rollout. See the
-[multimodal documentation](https://llm-as-a-verifier.com) for accepted
+[multimodal documentation](https://llm-as-a-verifier.com/docs/multimodal/image_inputs.html) for accepted
 input forms, backend notes, and verified examples.
 
 ---

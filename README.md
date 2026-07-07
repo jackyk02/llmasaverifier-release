@@ -375,3 +375,19 @@ Rating Rules: Rate completion on a 1-20 scale (1 = certainly not complete,
 
 > Note: we use a letter-based scale (A-T) instead of digits in the actual
 > implementation to enable logprob extraction for granularity scaling.
+
+## Citation
+
+If you find this work useful, please cite:
+
+```bibtex
+@misc{kwok2026llmasaverifiergeneralpurposeverificationframework,
+      title={LLM-as-a-Verifier: A General-Purpose Verification Framework}, 
+      author={Jacky Kwok and Shulu Li and Pranav Atreya and Yuejiang Liu and Yixing Jiang and Chelsea Finn and Marco Pavone and Ion Stoica and Azalia Mirhoseini},
+      year={2026},
+      eprint={2607.05391},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2607.05391}, 
+}
+```

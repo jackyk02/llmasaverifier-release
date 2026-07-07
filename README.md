@@ -10,7 +10,7 @@ Any modality, Many Applications, One Unified Verification Framework
 </h3>
 
 <p align="center">
-| <a href="https://llm-as-a-verifier.com/docs/"><b>Documentation</b></a> | <a href="https://llm-as-a-verifier.com"><b> Website</b></a> | <a href="https://arxiv.org/pdf/2607.05391"><b>Paper</b></a> | <a href="https://llm-as-a-verifier.notion.site/"><b>Blog Post</b></a> | <a href="https://x.com/jackyk02/status/2042347578139033628"><b>Twitter/X</b></a> | <a href="https://join.slack.com/t/llm-as-a-verifier/shared_invite/zt-3utx6oe8m-86ACBqtPGfsOnpOoMJQwng"><b>Slack</b></a> |
+| <a href="https://llm-as-a-verifier.com/docs/"><b>Documentation</b></a> | <a href="https://llm-as-a-verifier.com"><b> Website</b></a> | <a href="https://arxiv.org/pdf/2607.05391"><b>Paper</b></a> | <a href="https://github.com/llm-as-a-verifier/TurboAgent"><b>Claude Code Plugin</b></a> | <a href="https://x.com/jackyk02/status/2042347578139033628"><b>Twitter/X</b></a> | <a href="https://join.slack.com/t/llm-as-a-verifier/shared_invite/zt-3utx6oe8m-86ACBqtPGfsOnpOoMJQwng"><b>Slack</b></a> |
 </p>
 
 🔥 LLM-as-a-Verifier achieves SOTA performance across agentic benchmarks, including Terminal-Bench V2, SWE-Bench Verified, MedAgentBench, RoboRewardBench and more. We invite the community to contribute more use cases!

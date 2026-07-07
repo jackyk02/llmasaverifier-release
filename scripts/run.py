@@ -15,9 +15,9 @@ Scoring is two-phase because step 3's pivots depend on the ring-pass results:
 first score all ring pairs, then choose pivots, then score the pivot rounds.
 
 Usage:
-    python run.py                  # list available benchmarks
-    python run.py terminal_bench
-    python run.py swe_bench --pivots 2 --n-evaluations 8
+    python scripts/run.py                  # list available benchmarks
+    python scripts/run.py terminal_bench
+    python scripts/run.py swe_bench --pivots 2 --n-evaluations 8
 """
 
 import argparse
@@ -25,7 +25,7 @@ import os
 import random
 import sys
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
 from llm_verifier.benchmarks import BENCHMARKS
@@ -65,10 +65,10 @@ def resolve_config(benchmark):
     if benchmark:
         print(f"Unknown benchmark: {benchmark!r}\n")
     else:
-        print("Usage: python run.py <benchmark>\n")
+        print("Usage: python scripts/run.py <benchmark>\n")
     print("Available benchmarks:")
     for name in BENCHMARKS:
-        print(f"  python run.py {name}")
+        print(f"  python scripts/run.py {name}")
     sys.exit(0 if not benchmark else 2)
 
 

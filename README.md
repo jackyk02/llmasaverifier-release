@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD001 MD041 -->
 <p align="center">
   <picture>
-    <img alt="LLM-as-a-Verifier" src="figures/logo.png" width=78%>
+    <img alt="LLM-as-a-Verifier" src="assets/logo.png" width=78%>
   </picture>
 </p>
 
@@ -10,7 +10,7 @@ Any modality, Many Applications, One Unified Verification Framework
 </h3>
 
 <p align="center">
-| <a href="docs/"><b>Documentation</b></a> | <a href="https://llm-as-a-verifier.com"><b> Website</b></a> | <a href="https://arxiv.org/"><b>Paper</b></a> | <a href="https://blog.llm-as-a-verifier.ai"><b>Blog Post</b></a> | <a href="https://x.com/"><b>Twitter/X</b></a> | <a href="https://slack.llm-as-a-verifier.ai"><b>Slack</b></a> |
+| <a href="https://llm-as-a-verifier.com"><b>Documentation</b></a> | <a href="https://llm-as-a-verifier.com"><b> Website</b></a> | <a href="https://arxiv.org/"><b>Paper</b></a> | <a href="https://blog.llm-as-a-verifier.ai"><b>Blog Post</b></a> | <a href="https://x.com/"><b>Twitter/X</b></a> | <a href="https://slack.llm-as-a-verifier.ai"><b>Slack</b></a> |
 </p>
 
 🔥 LLM-as-a-Verifier achieves SOTA performance across agentic benchmarks, including Terminal-Bench V2, SWE-Bench Verified, MedAgentBench, RoboRewardBench and more. We invite the community to contribute more use cases!
@@ -42,7 +42,7 @@ resulting fine-grained feedback can be used for test-time scaling, progress
 tracking, and reinforcement learning.
 
 <p align="center">
-  <img src="figures/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
+  <img src="assets/llmoverview.png" alt="LLM-as-a-Verifier overview" width="100%">
 </p>
 
 ---
@@ -122,18 +122,18 @@ benchmark below. Expected results:
 
 ### Reproduce Results
 
-Run a benchmark by name (`python run.py` with no argument lists them):
+Run a benchmark by name (`python scripts/run.py` with no argument lists them):
 
 ```bash
-python run.py terminal_bench
-python run.py swe_bench
-python run.py medagentbench
+python scripts/run.py terminal_bench
+python scripts/run.py swe_bench
+python scripts/run.py medagentbench
 ```
 
 The tournament defaults can be overridden on the command line:
 
 ```bash
-python run.py swe_bench --pivots 2 --n-evaluations 8 --seed 0 --max-workers 50
+python scripts/run.py swe_bench --pivots 2 --n-evaluations 8 --seed 0 --max-workers 50
 ```
 
 Benchmarks are defined in `llm_verifier/benchmarks.py` — add or tweak one there.
@@ -189,11 +189,11 @@ The same fine-grained reward can score a trajectory *at every step* (see
 [`track` in the Quickstart](#fine-grained-progress-tracking)). Below, we track two Terminus-2 runs of the Terminal-Bench task `pytorch-model-cli`. The successful trajectory exhibits consistently increasing verifier scores, whereas the failed trajectory is characterized by erroneous behaviors, resulting in lower scores throughout the execution. Reproduce it with:
 
 ```bash
-python terminal_bench_progress.py    # scores both runs then plots
+python scripts/terminal_bench_progress.py    # scores both runs then plots
 ```
 
 <p align="center">
-  <img src="figures/progress_pytorch_model_cli.png" alt="Progress curves for two pytorch-model-cli runs" width="100%">
+  <img src="assets/progress_pytorch_model_cli.png" alt="Progress curves for two pytorch-model-cli runs" width="100%">
 </p>
 
 
@@ -222,7 +222,7 @@ Replay the two Terminal-Bench trajectories step-by-step through
 harness would see it:
 
 ```bash
-python terminal_bench_progress.py --online
+python scripts/terminal_bench_progress.py --online
 ```
 
 ---
@@ -245,7 +245,7 @@ score = tracker.update(step, images="camera_frame.png")  # per-step frame
 Per-step frames stay part of the trajectory for all later updates, so the
 verifier always sees the full visual history — e.g. camera frames while
 tracking a robot rollout. See the
-[multimodal documentation](docs/multimodal/image_inputs.md) for accepted
+[multimodal documentation](https://llm-as-a-verifier.com) for accepted
 input forms, backend notes, and verified examples.
 
 ---
@@ -254,8 +254,9 @@ input forms, backend notes, and verified examples.
 
 ```
 .
-├── run.py                       # registry-driven launcher
-├── terminal_bench_progress.py   # re-score + plot the progress-tracking example
+├── scripts/                     # command-line entry points
+│   ├── run.py                   #   registry-driven benchmark launcher
+│   └── terminal_bench_progress.py  # re-score + plot the progress-tracking example
 ├── criteria/                    # verifier criteria + ground-truth notes
 │   ├── TEMPLATE.md              #   copy this to write your own
 │   ├── terminal_bench.md
@@ -303,7 +304,7 @@ This lives in `llm_verifier/fine_grained_reward.py`.
 ### Probabilistic Pivot Tournament
 
 <p align="center">
-  <img src="figures/pivot_tournament.png" alt="Probabilistic Pivot Tournament" width="100%">
+  <img src="assets/pivot_tournament.png" alt="Probabilistic Pivot Tournament" width="100%">
 </p>
 
 To pick the best of `N` candidate trajectories, a round-robin tournament scores

@@ -9,9 +9,9 @@ the two mean curves, ±1 std band over the repeats). Scoring makes real
 verifier calls — requires `VERTEX_API_KEY` in `.env`.
 
 Usage:
-    python terminal_bench_progress.py                # re-score + plot
-    python terminal_bench_progress.py --plot-only    # plot the committed curves (no key)
-    python terminal_bench_progress.py --online       # replay both runs step-by-step
+    python scripts/terminal_bench_progress.py                # re-score + plot
+    python scripts/terminal_bench_progress.py --plot-only    # replot previously-scored curves (no key)
+    python scripts/terminal_bench_progress.py --online       # replay both runs step-by-step
                                                      # through ProgressTracker (K=4)
 
 Writes `cache/progress_pytorch-model-cli_k16.json` and `progress_traces.png`.
@@ -27,7 +27,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TRAJ_DIR = os.path.join(ROOT_DIR, "data", "tacking_examples",
                         "pytorch-model-cli")
 TRIALS = {"succ": "success", "fail": "fail"}
@@ -78,6 +78,7 @@ def rescore():
         curves[key] = {"task": d["task_name"], "trial": trial,
                        "T": len(steps), "checkpoint_steps": r.steps,
                        "per_rep_scores": r.per_rep_scores}
+    os.makedirs(os.path.dirname(CURVES_JSON), exist_ok=True)
     with open(CURVES_JSON, "w") as f:
         json.dump(curves, f, indent=2)
     print(f"saved {CURVES_JSON}")

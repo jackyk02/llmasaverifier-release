@@ -12,7 +12,7 @@ You can also pass your own pre-built `openai` or `google-genai` client via the `
 
 ## Can I use a local open model as the verifier?
 
-Yes — serve it with vLLM (or SGLang) and point `OPENAI_BASE_URL` at it; see [Set up a verifier backend](../get_started/install.md#set-up-a-verifier-backend).
+Yes — serve it with vLLM (or SGLang) and point `OPENAI_BASE_URL` at it; see [Set up a verifier backend](../get_started/installation.md#set-up-a-verifier-backend).
 On this backend the score tags are **prefilled** and the score position is constrained to the 20 scale letters via structured outputs, so the extracted distribution stays calibrated even for models that don't reliably follow the tag format.
 
 ## Can I use GPT or Claude as the verifier?
@@ -29,8 +29,7 @@ See [Verification as a Scaling Axis](../advanced_features/verification_scaling.m
 
 ## How much does a `select` call cost?
 
-The Probabilistic Pivot Tournament scores the `N` ring pairs plus the pivot-round pairs — `O(Nk²)` directed comparisons instead of `O(N²)` — and each scored pair costs `C × K` verifier calls (criteria × `n_evaluations`).
-Check `result.n_comparisons` after a run.
+`O(Nk²)` directed comparisons instead of `O(N²)`, each costing `C × K` verifier calls (criteria × `n_evaluations`) — check `result.n_comparisons` after a run.
 Reduce cost with fewer `pivots`, fewer `n_evaluations`, or a score `cache`.
 
 ## How do I make runs reproducible and resumable?

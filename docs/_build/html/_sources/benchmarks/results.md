@@ -1,3 +1,7 @@
+---
+orphan: true
+---
+
 # Benchmark Results
 
 LLM-as-a-Verifier achieves state-of-the-art performance across coding, robotics, and medical domains: Terminal-Bench V2 (86.5%), SWE-Bench Verified (78.2%), RoboRewardBench (87.4%), and MedAgentBench (73.3%).

@@ -12,23 +12,27 @@ are easy to read and edit without touching code. Expected layout:
 
     ## Criteria
 
-    ### <criterion_id> — <Criterion Name>
+    ### <Criterion Name>
 
     <criterion description, any number of paragraphs>
 
-    ### <criterion_id> — <Criterion Name>
+    ### <Criterion Name>
 
     ...
 
 The section headings ("Ground Truth Note", "Criteria") are matched
-case-insensitively. Each `### id — Name` heading accepts an em dash ("—"),
-en dash ("–"), or hyphen ("-") between the id and the name.
+case-insensitively. Each `### Criterion Name` heading is the criterion's
+display name; its id (used as the score-cache key and to reference the
+criterion from the benchmark registry) is slugged from the name. Pin an
+explicit id with a trailing Markdown attribute — `### Criterion Name {#id}` —
+when you need the id to stay stable while editing the name.
 """
 
 import os
 import re
 
-_CRIT_HEADING = re.compile(r"^(.+?)\s*[—–-]\s*(.+)$")
+# Optional trailing `{#id}` anchor on a criterion heading (Markdown-style).
+_CRIT_ID = re.compile(r"^(.*?)\s*\{#([A-Za-z0-9_-]+)\}\s*$")
 _HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 
 _FORMAT_HINT = """\
@@ -42,8 +46,8 @@ Expected criteria-file layout (see criteria/TEMPLATE.md):
 
     ## Criteria
 
-    ### <criterion_id> — <Criterion Name>
-
+    ### <Criterion Name>        <- id is slugged from the name;
+                                   pin one with `### Name {#id}`
     <instruction for this criterion>
 """
 
@@ -99,6 +103,7 @@ def load_prompts(path):
 
     ground_truth_note = ""
     criteria = []
+    seen = set()        # ids already used in this file
 
     section = None      # "ground_truth" | "criteria" | None
     cur = None          # current criterion dict
@@ -128,11 +133,12 @@ def load_prompts(path):
         elif line.startswith("### ") and section == "criteria":
             flush()
             heading = line[4:].strip()
-            m = _CRIT_HEADING.match(heading)
-            if m:
-                cur = {"id": m.group(1).strip(), "name": m.group(2).strip()}
-            else:
-                cur = {"id": heading, "name": heading}
+            m = _CRIT_ID.match(heading)
+            if m:                       # `### Name {#explicit_id}`
+                name, cid = m.group(1).strip(), m.group(2).strip()
+            else:                       # `### Name` -> id slugged from the name
+                name, cid = heading, _slug(heading)
+            cur = {"id": _dedup_id(cid, seen), "name": name}
         elif line.startswith("# "):
             continue
         else:
@@ -142,12 +148,12 @@ def load_prompts(path):
     if not criteria:
         raise ValueError(
             f"no criteria found in {path!r} — check the `## Criteria` section "
-            f"and `### id — Name` headings.\n\n{_FORMAT_HINT}")
+            f"and its `### Criterion Name` headings.\n\n{_FORMAT_HINT}")
     empty = [c["id"] for c in criteria if not c.get("description")]
     if empty:
         raise ValueError(
             f"criteria in {path!r} have empty instructions: {empty}. "
-            f"Each `### id — Name` heading needs a body the verifier can "
+            f"Each `### Criterion Name` heading needs a body the verifier can "
             f"score with.")
     return ground_truth_note, criteria
 
@@ -232,7 +238,7 @@ def _main(argv):
     print(f"ground-truth note: {note or '(none)'}\n")
     print(f"{len(criteria)} criteria:")
     for c in criteria:
-        print(f"\n### {c['id']} — {c['name']}\n{c['description']}")
+        print(f"\n### {c['name']}  (id: {c['id']})\n{c['description']}")
     return 0
 
 

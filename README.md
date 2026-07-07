@@ -84,7 +84,7 @@ reward_a, reward_b = llm_verifier.compare(
     problem, candidates[0], candidates[1],
     criteria={"Overall": "Does the code solve the problem?"},
 )
-print(reward_a, reward_b)   # fine-grained rewards in [0, 1]: 0.99994 4.68254e-05
+print(reward_a, reward_b)   # fine-grained rewards in [0, 1]: 0.99994 0
 ```
 
 ### Fine-grained Progress Tracking

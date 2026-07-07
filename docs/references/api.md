@@ -41,7 +41,7 @@ Identical inputs with the same `seed` run the identical tournament.
 - `problem`: the task description shown to the verifier.
 - `candidates`: list of N agent trajectories (strings) to rank.
 - `criteria`: a bundled benchmark name (e.g. `"swe_bench"`), a path to a `*.md` criteria file, a `{name: description}` dict, or a list of strings / `{"id", "name", "description"}` dicts.
-- `images`: task-context image(s) the verifier sees with every comparison — a single image or a list, each a local file path (`images="frame.png"`), an http(s) URL, or raw bytes. Requires a multimodal verifier model (Gemini, or a vision model behind the OpenAI-compatible server).
+- `images`: task-context image(s) the verifier sees with every comparison — a single image or a list ([`ImagesArg`](#constants-and-helpers)); requires a multimodal verifier model.
 - `ground_truth_note`: optional note the verifier always sees; defaults to the note parsed from the prompt file (or empty).
 - `n_evaluations`: repeated verifications K per criterion.
 - `pivots`: number of pivots k in the tournament. Keep k small relative to `len(candidates)` — cost grows as O(Nk²), and k ≥ N degenerates to a full round-robin (k is clamped to N).
@@ -51,7 +51,7 @@ Identical inputs with the same `seed` run the identical tournament.
 - `cache`: optional path to a JSON score cache. Re-running with the same cache re-scores only the comparisons not seen before.
 - `progress`: show a progress bar / log lines. Default (`None`) shows progress only when stderr is a TTY.
 - `on_error`: `"tie"` scores a failed verifier call 0.5/0.5 for this run (never persisted to the cache); `"raise"` re-raises it.
-- `client`: a pre-built `openai` or `google-genai` client (optional); by default an OpenAI-compatible client is created when `OPENAI_BASE_URL` is set (vLLM / SGLang / OpenAI — the served model is auto-detected), otherwise a Gemini client from `VERTEX_API_KEY`. Either way the backend must expose token-level logprobs.
+- `client`: a pre-built `openai` or `google-genai` client (optional); by default the backend is picked from the environment (`OPENAI_BASE_URL`, else `VERTEX_API_KEY`) and must expose token-level logprobs.
 
 **Returns** a [`VerifierResult`](#verifierresult) whose `.index` / `.best` is the chosen trajectory and `.ranking` orders all trajectories best-first.
 
@@ -104,7 +104,7 @@ One verifier call scores every checkpoint (repeated `n_evaluations` times and av
 
 - `problem`: the task instruction shown to the verifier.
 - `steps`: the agent's steps, one string per step (action + observed output). Truncate very long observations yourself if needed.
-- `images`: task-context image(s) attached to every scoring call — a single image or a list (paths, URLs, or bytes). For per-step frames, use `ProgressTracker` and pass images to each `update`.
+- `images`: task-context image(s) attached to every scoring call ([`ImagesArg`](#constants-and-helpers)); for per-step frames, use `ProgressTracker` and pass images to each `update`.
 - `checkpoint_steps`: 1-indexed step numbers to score. Defaults to the interior steps `2 .. T-1` (the first and last step anchor the scale), or every step for trajectories with fewer than 3 steps.
 - `n_evaluations`: independent repeats K; the returned curve is their mean.
 - `max_workers`: concurrency for the K repeats.
@@ -172,7 +172,7 @@ class ProgressResult:
 
 ## Constants and helpers
 
-- `ImagesArg` — the type of every `images` argument: one image or a sequence of images, where each image is a local file path, an http(s) URL, or raw image bytes. Images are attached to the verifier message after the text prompt, in order; the verifier model must be multimodal. See [Multimodal Verification with Images](../multimodal/image_inputs.md).
+- `ImagesArg` — the type of every `images` argument: one image or a sequence, each a local file path, an http(s) URL, or raw image bytes; attached after the text prompt, in order. See [Multi-Modal Supports](../multimodal/image_inputs.md).
 - `DEFAULT_MODEL = "gemini-2.5-flash"` — the default verifier model.
 - `GRANULARITY = 20` — the number of score tokens G (the letter scale A–T).
 - `load_dotenv(root_dir=None)` — load `VERTEX_API_KEY` / `OPENAI_BASE_URL` (and friends) from a `.env` file.

@@ -6,7 +6,7 @@
 
 ## Criteria
 
-### query — Search Parameter Accuracy
+### Search Parameter Accuracy {#query}
 
 Focus ONLY on the URL parameters in the agent's GET requests. For each parameter, check:
   1. patient= : Does it exactly match the MRN/ID from the question? Count the digits.
@@ -15,7 +15,7 @@ Focus ONLY on the URL parameters in the agent's GET requests. For each parameter
 
 Ignore everything else. Score ONLY on parameter accuracy.
 
-### consistency — Response-Answer Alignment
+### Response-Answer Alignment {#consistency}
 
 Look at the FHIR Bundle returned by the server:
   - How many entries does it contain? (check 'total' field or count entries)
@@ -25,7 +25,7 @@ Look at the FHIR Bundle returned by the server:
 
 Score on alignment between response content and answer.
 
-### structure — FINISH Format Compliance
+### FINISH Format Compliance {#structure}
 
 The agent MUST call FINISH([...]) as its final action with a JSON-loadable list.
   - No FINISH() = broken trajectory, regardless of correctness.

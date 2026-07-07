@@ -8,7 +8,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
-    <title>Probabilistic Pivot Tournament &#8212; LLM-as-a-Verifier</title>
+    <title>Progress Tracking Case Study &#8212; LLM-as-a-Verifier</title>
   
   
   
@@ -46,14 +46,12 @@
     <script src="../_static/clipboard.min.js?v=a7894cd8"></script>
     <script src="../_static/copybutton.js?v=fd10adb8"></script>
     <script src="../_static/scripts/sphinx-book-theme.js?v=fab101a9"></script>
-    <script>window.MathJax = {"options": {"processHtmlClass": "tex2jax_process|mathjax_process|math|output_area"}}</script>
-    <script defer="defer" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
-    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced_features/pivot_tournament';</script>
+    <script>DOCUMENTATION_OPTIONS.pagename = 'advanced_features/progress_case_study';</script>
     <link rel="icon" href="../_static/hq.png"/>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="Verification as a Scaling Axis" href="verification_scaling.html" />
-    <link rel="prev" title="Fine-Grained Reward Estimation" href="fine_grained_reward.html" />
+    <link rel="next" title="Logit-Restricted Frontier Models" href="logit_restricted_models.html" />
+    <link rel="prev" title="Verification as a Scaling Axis" href="verification_scaling.html" />
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <meta name="docsearch:language" content="en"/>
   <meta name="docsearch:version" content="0.1.0" />
@@ -185,9 +183,9 @@
 <ul class="current nav bd-sidenav">
 <li class="toctree-l1"><a class="reference internal" href="best_of_n_at_scale.html">Best-of-N Selection at Scale</a></li>
 <li class="toctree-l1"><a class="reference internal" href="fine_grained_reward.html">Fine-Grained Reward Estimation</a></li>
-<li class="toctree-l1 current active"><a class="current reference internal" href="#">Probabilistic Pivot Tournament</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pivot_tournament.html">Probabilistic Pivot Tournament</a></li>
 <li class="toctree-l1"><a class="reference internal" href="verification_scaling.html">Verification as a Scaling Axis</a></li>
-<li class="toctree-l1"><a class="reference internal" href="progress_case_study.html">Progress Tracking Case Study</a></li>
+<li class="toctree-l1 current active"><a class="current reference internal" href="#">Progress Tracking Case Study</a></li>
 <li class="toctree-l1"><a class="reference internal" href="logit_restricted_models.html">Logit-Restricted Frontier Models</a></li>
 <li class="toctree-l1"><a class="reference internal" href="reinforcement_learning.html">Reinforcement Learning with Verifier Rewards</a></li>
 </ul>
@@ -266,7 +264,7 @@
       
       
       
-      <li><a href="https://github.com/llm-as-a-verifier/llm-as-a-verifier/edit/main/docs/advanced_features/pivot_tournament.md" target="_blank"
+      <li><a href="https://github.com/llm-as-a-verifier/llm-as-a-verifier/edit/main/docs/advanced_features/progress_case_study.md" target="_blank"
    class="btn btn-sm btn-source-edit-button dropdown-item"
    title="Suggest edit"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -283,7 +281,7 @@
       
       
       
-      <li><a href="https://github.com/llm-as-a-verifier/llm-as-a-verifier/issues/new?title=Issue%20on%20page%20%2Fadvanced_features/pivot_tournament.html&body=Your%20issue%20content%20here." target="_blank"
+      <li><a href="https://github.com/llm-as-a-verifier/llm-as-a-verifier/issues/new?title=Issue%20on%20page%20%2Fadvanced_features/progress_case_study.html&body=Your%20issue%20content%20here." target="_blank"
    class="btn btn-sm btn-source-issues-button dropdown-item"
    title="Open an issue"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -313,7 +311,7 @@
       
       
       
-      <li><a href="../_sources/advanced_features/pivot_tournament.md" target="_blank"
+      <li><a href="../_sources/advanced_features/progress_case_study.md" target="_blank"
    class="btn btn-sm btn-download-source-button dropdown-item"
    title="Download source file"
    data-bs-placement="left" data-bs-toggle="tooltip"
@@ -376,9 +374,7 @@
 <button class="btn btn-sm pst-navbar-icon search-button search-button__button pst-js-only" title="Search" aria-label="Search" data-bs-placement="bottom" data-bs-toggle="tooltip">
     <i class="fa-solid fa-magnifying-glass fa-lg"></i>
 </button>
-<button class="sidebar-toggle secondary-toggle btn btn-sm pst-navbar-icon" title="Toggle secondary sidebar" data-bs-placement="bottom" data-bs-toggle="tooltip">
-    <span class="fa-solid fa-list"></span>
-</button>
+
 </div></div>
       
     </div>
@@ -389,22 +385,11 @@
               
 
 <div id="jb-print-docs-body" class="onlyprint">
-    <h1>Probabilistic Pivot Tournament</h1>
+    <h1>Progress Tracking Case Study</h1>
     <!-- Table of contents -->
     <div id="print-main-content">
         <div id="jb-print-toc">
             
-            <div>
-                <h2> Contents </h2>
-            </div>
-            <nav aria-label="Page">
-                <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-algorithm">The algorithm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-phase-scoring">Two-phase scoring</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuning">Tuning</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cost-model">Cost model</a></li>
-</ul>
-            </nav>
         </div>
     </div>
 </div>
@@ -414,47 +399,16 @@
 <div id="searchbox"></div>
                 <article class="bd-article">
                   
-  <section class="tex2jax_ignore mathjax_ignore" id="probabilistic-pivot-tournament">
-<h1>Probabilistic Pivot Tournament<a class="headerlink" href="#probabilistic-pivot-tournament" title="Link to this heading">#</a></h1>
-<p>To pick the best of <span class="math notranslate nohighlight">\(N\)</span> candidate trajectories, a round-robin tournament scores all <span class="math notranslate nohighlight">\(\binom{N}{2}\)</span> pairs — <span class="math notranslate nohighlight">\(\mathcal{O}(N^2)\)</span> verifier calls.
-The <strong>Probabilistic Pivot Tournament (PPT)</strong> is a cost-efficient ranking algorithm in which every candidate is compared only against a small set of <span class="math notranslate nohighlight">\(k \ll N\)</span> pivots, reducing the budget from <span class="math notranslate nohighlight">\(\mathcal{O}(N^2)\)</span> to <span class="math notranslate nohighlight">\(\mathcal{O}(Nk^2)\)</span>.
-The implementation lives in <code class="docutils literal notranslate"><span class="pre">llm_verifier/pivot_tournament.py</span></code>.</p>
-<a class="reference internal image-reference" href="../_images/pivot_tournament.png"><img alt="Probabilistic Pivot Tournament" src="../_images/pivot_tournament.png" style="width: 100%;" />
-</a>
-<section id="the-algorithm">
-<h2>The algorithm<a class="headerlink" href="#the-algorithm" title="Link to this heading">#</a></h2>
-<ol class="arabic simple">
-<li><p><strong>Candidates:</strong> the pool <span class="math notranslate nohighlight">\(\{\tau_1,\dots,\tau_N\}\)</span> to be ranked.</p></li>
-<li><p><strong>Ring pass:</strong> a random Hamiltonian cycle scores the <span class="math notranslate nohighlight">\(N\)</span> adjacent pairs so every candidate appears once in the “A” slot and once in “B”, canceling the model’s positional bias.</p></li>
-<li><p><strong>Pivot selection:</strong> candidates are ranked by their ring-pass scores <span class="math notranslate nohighlight">\(w_{(i)}\)</span>, and the top-<span class="math notranslate nohighlight">\(k\)</span> candidates form the pivot set <span class="math notranslate nohighlight">\(\mathcal{P}\)</span>.</p></li>
-<li><p><strong>Pivot tournament:</strong> every <em>non-pivot–vs–pivot</em> and <em>pivot–vs–pivot</em> pair is scored via the pairwise preference <span class="math notranslate nohighlight">\(p(a \succ b) = \sigma(R_a - R_b)\)</span>, concentrating the budget on uncertain top candidates and cutting cost from <span class="math notranslate nohighlight">\(\mathcal{O}(N^2)\)</span> to <span class="math notranslate nohighlight">\(\mathcal{O}(Nk^2)\)</span>.</p></li>
-<li><p><strong>Selection:</strong> comparisons are aggregated into win mass <span class="math notranslate nohighlight">\(w_i\)</span> and count <span class="math notranslate nohighlight">\(c_i\)</span>, and the candidate with the highest normalized <span class="math notranslate nohighlight">\(w_i/c_i\)</span> is returned.</p></li>
-</ol>
-</section>
-<section id="two-phase-scoring">
-<h2>Two-phase scoring<a class="headerlink" href="#two-phase-scoring" title="Link to this heading">#</a></h2>
-<p>Scoring is two-phase because the pivots depend on the ring-pass results: <code class="docutils literal notranslate"><span class="pre">select</span></code> first scores all ring pairs, then chooses pivots, then scores the pivot rounds.
-Only the directed pairs the tournament actually needs are scored, and every pair is cached (see the <code class="docutils literal notranslate"><span class="pre">cache</span></code> argument), so re-runs are incremental.</p>
-</section>
-<section id="tuning">
-<h2>Tuning<a class="headerlink" href="#tuning" title="Link to this heading">#</a></h2>
-<ul class="simple">
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">pivots</span></code> (k):</strong> trades cost for accuracy — more pivots means more comparisons and higher accuracy. Keep <code class="docutils literal notranslate"><span class="pre">k</span></code> small relative to <code class="docutils literal notranslate"><span class="pre">N</span></code>; <code class="docutils literal notranslate"><span class="pre">k</span> <span class="pre">≥</span> <span class="pre">N</span></code> degenerates to a full round-robin (<code class="docutils literal notranslate"><span class="pre">k</span></code> is clamped to <code class="docutils literal notranslate"><span class="pre">N</span></code>). The bundled benchmarks default to <code class="docutils literal notranslate"><span class="pre">pivots=2</span></code>.</p></li>
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">n_evaluations</span></code> (K):</strong> repeats per criterion for each scored pair; the <a class="reference internal" href="verification_scaling.html"><span class="std std-doc">repeated-evaluation scaling axis</span></a>. Benchmarks default to <code class="docutils literal notranslate"><span class="pre">K=8</span></code>.</p></li>
-<li><p><strong><code class="docutils literal notranslate"><span class="pre">seed</span></code>:</strong> seeds the random ring pass. Identical inputs with the same seed run the identical tournament, so results are reproducible.</p></li>
-</ul>
-</section>
-<section id="cost-model">
-<h2>Cost model<a class="headerlink" href="#cost-model" title="Link to this heading">#</a></h2>
-<p>For one task, the number of directed verifier comparisons is the <span class="math notranslate nohighlight">\(N\)</span> ring pairs plus the pivot-round pairs, each scored <span class="math notranslate nohighlight">\(C \times K\)</span> times (criteria × repeats).
-<code class="docutils literal notranslate"><span class="pre">result.n_comparisons</span></code> reports how many directed comparisons were run:</p>
-<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">result</span> <span class="o">=</span> <span class="n">llm_verifier</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">problem</span><span class="p">,</span> <span class="n">trajectories</span><span class="p">,</span>
-                             <span class="n">criteria</span><span class="o">=</span><span class="s2">&quot;terminal_bench&quot;</span><span class="p">,</span>
-                             <span class="n">pivots</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span> <span class="n">n_evaluations</span><span class="o">=</span><span class="mi">8</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">n_comparisons</span><span class="p">)</span>
+  <section class="tex2jax_ignore mathjax_ignore" id="progress-tracking-case-study">
+<h1>Progress Tracking Case Study<a class="headerlink" href="#progress-tracking-case-study" title="Link to this heading">#</a></h1>
+<p>The progress curve separates successful from failed runs long before the task’s grader does — a signal you can act on mid-rollout.</p>
+<p>Below, we track two Terminus-2 runs of the Terminal-Bench task <code class="docutils literal notranslate"><span class="pre">pytorch-model-cli</span></code>. The successful trajectory exhibits consistently increasing verifier scores, whereas the failed trajectory is characterized by erroneous behaviors, resulting in lower scores throughout the execution. Reproduce it with:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>terminal_bench_progress.py<span class="w">    </span><span class="c1"># scores both runs then plots</span>
 </pre></div>
 </div>
-</section>
+<a class="reference internal image-reference" href="../_images/progress_pytorch_model_cli.png"><img alt="Progress curves for two pytorch-model-cli runs" src="../_images/progress_pytorch_model_cli.png" style="width: 100%;" />
+</a>
+<p>See <a class="reference internal" href="../basic_usage/progress_tracking.html"><span class="std std-doc">Progress Tracking</span></a> for the <code class="docutils literal notranslate"><span class="pre">track</span></code> / <code class="docutils literal notranslate"><span class="pre">ProgressTracker</span></code> API used here.</p>
 </section>
 
 
@@ -469,20 +423,20 @@ Only the directed pairs the tournament actually needs are scored, and every pair
                   
 <div class="prev-next-area">
     <a class="left-prev"
-       href="fine_grained_reward.html"
+       href="verification_scaling.html"
        title="previous page">
       <i class="fa-solid fa-angle-left"></i>
       <div class="prev-next-info">
         <p class="prev-next-subtitle">previous</p>
-        <p class="prev-next-title">Fine-Grained Reward Estimation</p>
+        <p class="prev-next-title">Verification as a Scaling Axis</p>
       </div>
     </a>
     <a class="right-next"
-       href="verification_scaling.html"
+       href="logit_restricted_models.html"
        title="next page">
       <div class="prev-next-info">
         <p class="prev-next-subtitle">next</p>
-        <p class="prev-next-title">Verification as a Scaling Axis</p>
+        <p class="prev-next-title">Logit-Restricted Frontier Models</p>
       </div>
       <i class="fa-solid fa-angle-right"></i>
     </a>
@@ -492,26 +446,6 @@ Only the directed pairs the tournament actually needs are scored, and every pair
             </div>
             
             
-              
-                <dialog id="pst-secondary-sidebar-modal"></dialog>
-                <div id="pst-secondary-sidebar" class="bd-sidebar-secondary bd-toc"><div class="sidebar-secondary-items sidebar-secondary__inner">
-
-
-  <div class="sidebar-secondary-item"><div
-    id="pst-page-navigation-heading-2"
-    class="page-toc tocsection onthispage">
-    <i class="fa-solid fa-list"></i> Contents
-  </div>
-  <nav id="pst-page-toc-nav" class="page-toc" aria-labelledby="pst-page-navigation-heading-2">
-    <ul class="visible nav section-nav flex-column">
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#the-algorithm">The algorithm</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#two-phase-scoring">Two-phase scoring</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#tuning">Tuning</a></li>
-<li class="toc-h2 nav-item toc-entry"><a class="reference internal nav-link" href="#cost-model">Cost model</a></li>
-</ul>
-  </nav></div>
-
-</div></div>
               
             
           </div>

@@ -6,30 +6,33 @@ For the raw fine-grained rewards of a single comparison, call `compare`:
 ```python
 import llm_verifier
 
-r_a, r_b = llm_verifier.compare(
-    problem, trace_a, trace_b,
-    criteria={"Overall": "Did the agent solve the task?"},
+problem = "Write a function that reverses a string."
+candidates = [
+    "def rev(s): return s[::-1]",              # correct reversal
+    "def rev(s): return s",                    # identity — returns the string unchanged
+    "def rev(s): return ''.join(sorted(s))",   # sorts the characters instead
+]
+
+reward_a, reward_b = llm_verifier.compare(
+    problem, candidates[0], candidates[1],
+    criteria={"Overall": "Does the code solve the problem?"},
+    n_evaluations=1,                   # repeats K per criterion, averaged
+    max_workers=50,                     # concurrency for the scoring calls
+    model="gemini-2.5-flash",          # verifier model
 )
-print(r_a, r_b)   # fine-grained rewards in [0, 1]
+print(reward_a, reward_b)   # fine-grained rewards in [0, 1]: 0.99994 0
 ```
 
-The verifier sees `trace_a` in slot A and `trace_b` in slot B; the returned rewards are averaged over all criteria and `n_evaluations` repeats.
-To score against visual evidence, attach image(s) with `images=` — see [Multimodal Verification with Images](../multimodal/image_inputs.md).
+The returned rewards are averaged over all criteria and `n_evaluations` repeats.
 
-## Arguments
+## Key arguments
 
-```python
-r_a, r_b = llm_verifier.compare(
-    problem, trace_a, trace_b,
-    criteria="swe_bench",        # same forms as select()
-    images=None,                 # task-context image(s): a path, URL, or bytes — or a list
-    ground_truth_note=None,      # optional note the verifier always sees
-    n_evaluations=1,           # repeats K, averaged
-    max_workers=8,               # concurrency for the K x C scoring calls
-    model="gemini-2.5-flash",
-    client=None,                 # pre-built google-genai client (optional)
-)
-```
+- `criteria` *(required)*: same forms as `select`'s — a benchmark name, a criteria file path, a `{name: description}` dict, or a list of strings.
+- `n_evaluations=1`: repeats `K` per criterion; averaging reduces per-call noise.
+- `max_workers=8`: concurrency for the scoring calls.
+- `model="gemini-2.5-flash"`: the verifier model.
+
+See the [API reference](../references/api.md#compare) for all arguments.
 
 ## Positional bias
 
@@ -53,8 +56,3 @@ p(a \succ b) = \sigma(R_a - R_b)
 $$
 
 This is the preference the [Probabilistic Pivot Tournament](../advanced_features/pivot_tournament.md) aggregates when ranking N candidates.
-
-```{note}
-Unlike `select`, `compare` has no tie fallback — a failed verifier call raises.
-It also raises `MissingAPIKeyError` if no credentials are found and no `client` is given.
-```

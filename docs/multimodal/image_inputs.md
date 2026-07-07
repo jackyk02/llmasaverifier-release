@@ -1,46 +1,15 @@
-# Multimodal Verification with Images
+# Multi-Modal Supports
 
-Every LLM-as-a-Verifier entry point — `select`, `compare`, `track`, and `ProgressTracker` — accepts image inputs alongside the text trajectory.
-The images are attached to the verifier message itself, so the fine-grained logprob reward works unchanged: the verifier *looks* at the evidence (a screenshot, a rendered plot, a camera frame) instead of trusting the agent's textual claim about it.
-
-Typical uses:
-
-- **GUI / browser agents** — attach screenshots so the verifier scores what is actually on screen, not what the agent narrates.
-- **Robotics** — attach per-step camera frames and track progress toward a visual goal (this is the zero-shot setup behind the RoboRewardBench results in [Benchmark Results](../benchmarks/results.md)).
-- **Data analysis & charts** — attach the rendered figure a task asked for and let the verifier check it against the instruction.
-- **Visual ground truth** — attach a goal or reference image the trajectories are supposed to reproduce.
+Every entry point — `select`, `compare`, `track`, and `ProgressTracker` — accepts images alongside the text trajectory.
 
 ## The `images` argument
 
-All APIs take the same `images` keyword (type alias `ImagesArg`):
+All APIs take the same `images` keyword — a single image or a list, each a **local file path**, an **http(s) URL**, or **raw bytes**:
 
 ```python
 images="frame.png"                      # a single image ...
 images=["before.png", "after.png"]      # ... or several, attached in order
 ```
-
-Each image may be:
-
-- a **local file path** (`str` or `os.PathLike`) — read from disk;
-- an **http(s) URL** — fetched once when the call is made;
-- **raw bytes** — e.g. a frame you already hold in memory.
-
-The MIME type is sniffed from the image bytes (PNG, JPEG, GIF, WebP).
-Images are attached to the verifier message *after* the text prompt, in the order given, and the prompt gains a one-line `**Attached images:** N image(s)…` note so the verifier knows to use them; text-only calls build byte-identical prompts to before.
-
-## Verifier backends
-
-Image inputs require a **multimodal verifier model** on either backend:
-
-| Backend | How | Example |
-|---|---|---|
-| Gemini (default) | images become inline parts of the request | `gemini-2.5-flash` (the default model) is multimodal out of the box |
-| OpenAI-compatible (vLLM / SGLang) | images become base64 `image_url` content parts | serve a multimodal model, e.g. `vllm serve Qwen/Qwen3.5-9B` |
-
-For the OpenAI-compatible backend everything from [Serving Open Models](../get_started/install.md) carries over unchanged — the same `vllm serve Qwen/Qwen3.5-9B` used for text verification handles images too (Qwen3.5 models are natively multimodal), `OPENAI_BASE_URL` selects the backend, the served model is auto-detected, and the [constrained score-tag prefill](../advanced_features/logit_restricted_models.md) keeps the fine-grained reward exact.
-The prefill grammar accepts the score letter with or without a leading space; multimodal tokenizers (e.g. Qwen's) put nearly all probability mass on the space-prefixed spelling, and without that allowance the grammar mask would silently discard the model's real distribution.
-
-A text-only model behind the server will reject (or worse, ignore) image content — if scores stop tracking the images, check the served model is actually multimodal.
 
 ## The example images
 
@@ -87,38 +56,28 @@ r_a, r_b = llm_verifier.compare(
     criteria={"Correctness": "Does the answer match the attached image?"},
     images="red.png",
 )
-# Gemini 2.5 Flash:      R_A = 1.000, R_B = 0.000
-# Qwen3.5-9B via vLLM:   R_A = 0.993, R_B = 0.158
+# R_A = 0.993, R_B = 0.158
 ```
 
 ## Progress tracking with per-step frames
 
-For progress tracking, images can be **task context** (a goal image, attached to every scoring call) or **per-step evidence** (a camera frame after each action):
-
-- `track(problem, steps, images=...)` and `ProgressTracker(problem, images=...)` attach task-context image(s) to every scoring call.
-- `ProgressTracker.update(step, images=...)` attaches image(s) to *that step*: the step text gets an `[Image i attached]` marker, the frame is appended to the message, and it stays part of the trajectory for all later updates — so the verifier always sees the full visual history of the prefix.
+On a red → purple → blue toy task, the progress curve rises from the frames alone (scores below are Gemini 2.5 Flash):
 
 ```python
 tracker = llm_verifier.ProgressTracker(
     "Change the on-screen square's color from red to blue. The attached "
     "frame after each step shows the current screen.")
 
-for step, frame in agent_run():          # frame: path, URL, or raw bytes
-    score = tracker.update(step, images=frame)
+score = tracker.update("Opened the color panel.", images="red.png")            # 0.000
+score = tracker.update("Dragged the hue slider halfway.", images="purple.png") # 0.175
+score = tracker.update("Saved; the square renders blue.", images="blue.png")   # 1.000
 ```
 
-On the red → purple → blue toy task above, both backends produce the expected rising curve from the frames alone:
+## Verifier backends
 
-| Backend | step 1 (red) | step 2 (purple) | step 3 (blue) |
-|---|---|---|---|
-| Gemini 2.5 Flash | 0.000 | 0.175 | 1.000 |
-| Qwen3.5-9B via vLLM | 0.002 | 0.263 | 1.000 |
+Image inputs require a **multimodal verifier model** on either backend:
 
-When images are attached, the [progress-scoring prompt](../basic_usage/progress_tracking.md) gains an `**Attached images:**` line explaining the markers; the template is otherwise unchanged.
-
-## Practical notes
-
-- **Every scoring call resends the images.** `select` runs O(Nk²) comparisons and an online tracker resends the accumulated frames on every update — keep images small (downscale screenshots; a 64–512 px side is usually plenty for color/layout judgments).
-- **Small open models are noisier.** As with text, average out per-call noise with `n_evaluations` (the two-image `select` above is reliable at `n_evaluations=4` on Qwen3.5-9B; Gemini 2.5 Flash needs less).
-- **Video**: sample frames yourself and pass them as ordered images — one frame per step through `ProgressTracker.update` mirrors the RoboRewardBench setup.
-- Under the hood the plumbing lives in `llm_verifier/fine_grained_reward.py` (`as_image_list`, `load_image`, and the `images=` parameter of `call_verifier`).
+| Backend | How | Example |
+|---|---|---|
+| Gemini (default) | images become inline parts of the request | `gemini-2.5-flash` (the default model) is multimodal out of the box |
+| OpenAI-compatible (vLLM / SGLang) | images become base64 `image_url` content parts | serve a multimodal model, e.g. `vllm serve Qwen/Qwen3.5-9B` |

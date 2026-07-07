@@ -39,7 +39,7 @@ source_suffix = {
 html_title = "LLM-as-a-Verifier"
 html_theme = "sphinx_book_theme"
 html_logo = "_static/image/logo.png"
-html_favicon = "_static/image/logo.png"
+html_favicon = "_static/image/hq.png"
 html_static_path = ["_static"]
 
 html_theme_options = {

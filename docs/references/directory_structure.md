@@ -30,7 +30,7 @@
 | Concept | Documentation | Implementation |
 |---|---|---|
 | Fine-grained reward $R(x,\tau)$ | [Fine-Grained Reward Estimation](../advanced_features/fine_grained_reward.md) | `llm_verifier/fine_grained_reward.py` |
-| Best-of-N selection | [Quick Start](../basic_usage/quickstart.md) | `llm_verifier/__init__.py` (`select`) |
+| Best-of-N selection | [Best-of-N Selection](../advanced_features/best_of_n_at_scale.md) | `llm_verifier/__init__.py` (`select`) |
 | Probabilistic Pivot Tournament | [Probabilistic Pivot Tournament](../advanced_features/pivot_tournament.md) | `llm_verifier/pivot_tournament.py` |
 | Progress tracking | [Progress Tracking](../basic_usage/progress_tracking.md) | `llm_verifier/progress.py` |
 | Criteria files | [Writing Verifier Criteria](../basic_usage/criteria.md) | `llm_verifier/prompts.py`, `criteria/` |

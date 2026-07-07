@@ -66,10 +66,6 @@ You can also override it per call with the `ground_truth_note` argument.
 One `### Criterion Name` heading per criterion; everything until the next heading is its instruction.
 Write each so a stranger could score with it:
 
-- say exactly **where** to look (which commands, fields, files, outputs),
-- say what should score **HIGH** and what should score **LOW**,
-- say what to **ignore**, so one criterion doesn't leak into another.
-
 ## Preview what the verifier sees
 
 Preview any criteria file or bundled benchmark exactly as the verifier will see it — no API key needed:
